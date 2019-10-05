@@ -28,6 +28,7 @@ public class MyService extends HttpServer implements Service {
         return serverConfig;
     }
 
+
     @Path("/v0/entity")
     public Response entity(@Param("id") final String id,
                            final Request request) {
