@@ -82,6 +82,22 @@ public class MyDAO implements DAO {
         return Iterators.filter(collapsedIter, i -> !i.isRemoved());
     }
 
+    @NotNull
+    @Override
+    public ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementExceptionLite {
+        final Iterator<Record> iter = iterator(key);
+        if (!iter.hasNext()) {
+            throw new NoSuchElementExceptionLite("Not found");
+        }
+
+        final Record next = iter.next();
+        if (next.getKey().equals(key)) {
+            return next.getValue();
+        } else {
+            throw new NoSuchElementExceptionLite("Not found");
+        }
+    }
+
     @Override
     public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
         memTable.upsert(key, value);
