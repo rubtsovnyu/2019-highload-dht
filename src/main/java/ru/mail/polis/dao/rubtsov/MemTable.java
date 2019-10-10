@@ -1,32 +1,29 @@
 package ru.mail.polis.dao.rubtsov;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Part of storage located in RAM.
  */
 
-public final class MemTable {
-    private final long flushThresholdInBytes;
+public final class MemTable implements Table {
 
     private final SortedMap<ByteBuffer, Item> data;
-    private long sizeInBytes;
+    private final String uniqueID;
+    private AtomicLong sizeInBytes = new AtomicLong();
 
     /**
      * Creates a new RAM-storage.
-     *
-     * @param heapSizeInBytes given JVM max heap size
      */
 
-    public MemTable(final long heapSizeInBytes) {
-        data = new TreeMap<>();
-        flushThresholdInBytes = heapSizeInBytes / 16;
+    public MemTable() {
+        data = new ConcurrentSkipListMap<>();
+        uniqueID = UUID.randomUUID().toString();
     }
 
     public Iterator<Item> iterator(final ByteBuffer from) {
@@ -58,36 +55,20 @@ public final class MemTable {
         calcNewSize(data.put(key, dead), dead);
     }
 
+    public long sizeInBytes() {
+        return sizeInBytes.get();
+    }
+
     private void calcNewSize(final Item previousItem, final Item val) {
         if (previousItem == null) {
-            sizeInBytes += val.getSizeInBytes();
+            sizeInBytes.addAndGet(val.getSizeInBytes());
         } else {
-            sizeInBytes += -previousItem.getSizeInBytes() + val.getSizeInBytes();
+            sizeInBytes.addAndGet(-previousItem.getSizeInBytes() + val.getSizeInBytes());
         }
     }
 
-    public boolean isFlushNeeded() {
-        return sizeInBytes > flushThresholdInBytes;
+    public String getUniqueID() {
+        return uniqueID;
     }
 
-    /**
-     * Drops current MemTable to file.
-     *
-     * @return path of new SSTable or null if something went wrong during flush
-     */
-
-    public Path flush(final File ssTablesDir) throws IOException {
-        final Path newSSTablePath = SSTable.writeNewTable(data.values().iterator(), ssTablesDir);
-        clear();
-        return newSSTablePath;
-    }
-
-    public void clear() {
-        data.clear();
-        sizeInBytes = 0;
-    }
-
-    public boolean isEmpty() {
-        return data.isEmpty();
-    }
 }

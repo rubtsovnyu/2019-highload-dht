@@ -1,12 +1,15 @@
 package ru.mail.polis.dao.rubtsov;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Simple nano time to avoid collisions.
  */
 
 public final class TimeUtils {
-    private static long millis;
-    private static int additionalTime;
+    private static AtomicLong millis = new AtomicLong();
+    private static AtomicInteger additionalTime = new AtomicInteger();
 
     private TimeUtils() {
     }
@@ -19,10 +22,9 @@ public final class TimeUtils {
 
     public static long getCurrentTime() {
         final long systemCurrentTime = System.currentTimeMillis();
-        if (millis != systemCurrentTime) {
-            millis = systemCurrentTime;
-            additionalTime = 0;
+        if (millis.getAndSet(systemCurrentTime) != systemCurrentTime) {
+            additionalTime.set(0);
         }
-        return millis * 1_000_000 + additionalTime++;
+        return millis.get() * 1_000_000 + additionalTime.getAndIncrement();
     }
 }

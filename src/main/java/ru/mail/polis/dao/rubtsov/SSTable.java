@@ -1,6 +1,7 @@
 package ru.mail.polis.dao.rubtsov;
 
 import com.google.common.base.Preconditions;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,13 +10,18 @@ import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import static com.google.common.io.Files.getNameWithoutExtension;
 
 /**
  * Part of storage located at disk.
  */
 
-public final class SSTable {
+public final class SSTable implements Table {
     static final String VALID_FILE_EXTENSTION = ".dat";
     private static final String TEMP_FILE_EXTENSTION = ".tmp";
     private final ByteBuffer records;
@@ -62,13 +68,12 @@ public final class SSTable {
      * @throws IOException if something went wrong during writing
      */
 
-    public static Path writeNewTable(final Iterator<Item> items, final File ssTablesDir) throws IOException {
+    public static Path writeNewTable(final Iterator<Item> items, final File ssTablesDir, final String uniqueID) throws IOException {
         final List<Long> offsets = new ArrayList<>();
         long offset = 0;
         offsets.add(offset);
-        final String uuid = UUID.randomUUID().toString();
-        final String fileName = uuid + TEMP_FILE_EXTENSTION;
-        final String fileNameComplete = uuid + VALID_FILE_EXTENSTION;
+        final String fileName = uniqueID + TEMP_FILE_EXTENSTION;
+        final String fileNameComplete = uniqueID + VALID_FILE_EXTENSTION;
         final Path path = ssTablesDir.toPath().resolve(Paths.get(fileName));
         final Path pathComplete = ssTablesDir.toPath().resolve(Paths.get(fileNameComplete));
         Item item;
@@ -196,5 +201,25 @@ public final class SSTable {
                 return item;
             }
         };
+    }
+
+    @Override
+    public long sizeInBytes() {
+        return tableFile.length();
+    }
+
+    @Override
+    public String getUniqueID() {
+        return getNameWithoutExtension(tableFile.getName());
+    }
+
+    @Override
+    public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) {
+        throw new UnsupportedOperationException("Can't upsert a new value into SSTable.");
+    }
+
+    @Override
+    public void remove(@NotNull ByteBuffer key) {
+        throw new UnsupportedOperationException("Can't remove a value from SSTable.");
     }
 }

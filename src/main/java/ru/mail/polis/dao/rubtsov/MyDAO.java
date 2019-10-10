@@ -6,17 +6,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.dao.Iters;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 /**
@@ -26,11 +25,12 @@ import java.util.stream.Stream;
 public class MyDAO implements DAO {
     private static final int COMPACTION_THRESHOLD = 8;
 
-    private final MemTable memTable;
-    private final List<SSTable> ssTables = new ArrayList<>();
+    private final MemTablePool memTablePool;
+    private final List<SSTable> ssTables;
     private final File ssTablesDir;
     private final Logger logger = LoggerFactory.getLogger(MyDAO.class);
-
+    private final FlushThread flushThread;
+    private final ReadWriteLock readWriteLock;
 
     /**
      * Constructs a new, empty storage.
@@ -40,8 +40,9 @@ public class MyDAO implements DAO {
      */
 
     public MyDAO(final File dataFolder, final long heapSizeInBytes) throws IOException {
-        memTable = new MemTable(heapSizeInBytes);
+        memTablePool = new MemTablePool(heapSizeInBytes / 64);
         ssTablesDir = dataFolder;
+        ssTables = new CopyOnWriteArrayList<>();
         try (Stream<Path> files = Files.list(ssTablesDir.toPath())) {
             files.filter(Files::isRegularFile)
                     .filter(p -> p.getFileName().toString().endsWith(SSTable.VALID_FILE_EXTENSTION))
@@ -53,6 +54,9 @@ public class MyDAO implements DAO {
                         }
                     });
         }
+        flushThread = new FlushThread();
+        flushThread.start();
+        readWriteLock = new ReentrantReadWriteLock();
     }
 
     private void initNewSSTable(final File ssTableFile) throws IOException {
@@ -60,7 +64,7 @@ public class MyDAO implements DAO {
             final SSTable ssTable = new SSTable(ssTableFile);
             ssTables.add(ssTable);
         } catch (IllegalArgumentException e) {
-            logger.error("File corrupted: {}, skipped.", ssTableFile.getName());
+            logger.error("File corrupted: {}, skipped.", ssTableFile.getName(), e);
         }
     }
 
@@ -72,14 +76,18 @@ public class MyDAO implements DAO {
     }
 
     private Iterator<Item> itemIterator(@NotNull final ByteBuffer from) {
-        final Collection<Iterator<Item>> iterators = new ArrayList<>();
-        iterators.add(memTable.iterator(from));
-        for (final SSTable s : ssTables) {
-            iterators.add(s.iterator(from));
+        readWriteLock.readLock().lock();
+        final Collection<Iterator<Item>> iterators;
+        try {
+            iterators = new ArrayList<>(ssTables.size() + memTablePool.size());
+            iterators.add(memTablePool.iterator(from));
+            for (final Table s : ssTables) {
+                iterators.add(s.iterator(from));
+            }
+        } finally {
+            readWriteLock.readLock().unlock();
         }
-        final Iterator<Item> mergedIter = Iterators.mergeSorted(iterators, Item.COMPARATOR);
-        final Iterator<Item> collapsedIter = Iters.collapseEquals(mergedIter, Item::getKey);
-        return Iterators.filter(collapsedIter, i -> !i.isRemoved());
+        return IteratorUtils.itersTransform(iterators);
     }
 
     @NotNull
@@ -100,44 +108,55 @@ public class MyDAO implements DAO {
 
     @Override
     public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
-        memTable.upsert(key, value);
-        if (memTable.isFlushNeeded()) {
-            flushTable();
-        }
+        memTablePool.upsert(key, value);
     }
 
     @Override
     public void remove(@NotNull final ByteBuffer key) throws IOException {
-        memTable.remove(key);
-        if (memTable.isFlushNeeded()) {
-            flushTable();
-        }
+        memTablePool.remove(key);
     }
 
     @Override
     public void close() throws IOException {
-        if (!memTable.isEmpty()) {
-            memTable.flush(ssTablesDir);
+        memTablePool.close();
+        try {
+            flushThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void flushTable() throws IOException {
-        if (ssTables.size() >= COMPACTION_THRESHOLD) {
+    private void flushTable(final Table table) throws IOException {
+        Iterator<Item> iterator = table.iterator(ByteBuffer.allocate(0));
+        final Path flushedFilePath = SSTable.writeNewTable(iterator, ssTablesDir, table.getUniqueID());
+        initNewSSTable(flushedFilePath.toFile());
+        if (ssTables.size() > COMPACTION_THRESHOLD) {
             compact();
-        } else {
-            final Path flushedFilePath = memTable.flush(ssTablesDir);
-            initNewSSTable(flushedFilePath.toFile());
         }
     }
 
     @Override
     public void compact() throws IOException {
-        final Iterator<Item> itemIterator = itemIterator(Item.TOMBSTONE);
-        final Path mergedTable = SSTable.writeNewTable(itemIterator, ssTablesDir);
-        ssTables.forEach(s -> removeFile(s.getTableFile().toPath()));
-        ssTables.clear();
-        memTable.clear();
-        initNewSSTable(mergedTable.toFile());
+        readWriteLock.readLock().lock();
+        final Collection<Iterator<Item>> iterators;
+        try {
+            iterators = new ArrayList<>();
+            for (final Table s : ssTables) {
+                iterators.add(s.iterator(ByteBuffer.allocate(0)));
+            }
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
+        Iterator<Item> itersTransform = IteratorUtils.itersTransform(iterators);
+        Path compactioned = SSTable.writeNewTable(itersTransform, ssTablesDir, UUID.randomUUID().toString());
+        readWriteLock.writeLock().lock();
+        try {
+            ssTables.forEach(s -> removeFile(s.getTableFile().toPath()));
+            ssTables.clear();
+            initNewSSTable(compactioned.toFile());
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
     }
 
     private void removeFile(final Path p) {
@@ -145,6 +164,34 @@ public class MyDAO implements DAO {
             Files.delete(p);
         } catch (IOException e) {
             logger.error("Can't remove old file: {}", p.getFileName(), e);
+        }
+    }
+
+    private class FlushThread extends Thread {
+        public FlushThread() {
+            super("flusher");
+        }
+
+        @Override
+        public void run() {
+            boolean poisonReceived = false;
+            while (!poisonReceived && !isInterrupted()) {
+                logger.info("Number of files: {}", ssTables.size());
+                TableToFlush tableToFlush = null;
+                try {
+                    tableToFlush = memTablePool.takeToFlush();
+                    poisonReceived = tableToFlush.isPoisonPill();
+                    flushTable(tableToFlush.getTable());
+                    memTablePool.flushed(tableToFlush.getTable().getUniqueID());
+                } catch (InterruptedException e) {
+                    interrupt();
+                } catch (IOException e) {
+                    logger.error("Error while flushing a table {}", tableToFlush.getTable().getUniqueID(), e);
+                }
+            }
+            if (poisonReceived) {
+                logger.info("Poison pill received. Flushing stopped.");
+            }
         }
     }
 }
