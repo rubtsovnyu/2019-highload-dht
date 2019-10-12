@@ -36,7 +36,7 @@ public class MyService extends HttpServer implements Service {
     }
 
     /**
-     * Receives a request to an entity and respond depending on the method
+     * Receives a request to an entity and respond depending on the method.
      * @param id Entity iD
      * @param request HTTP request
      * @return HTTP response

@@ -12,7 +12,7 @@ public final class IteratorUtils {
 
     /**
      * Receives some {@link Collection} of iterators over {@link Item}s, merges it,
-     * collapses equals by key and filters them according to existence
+     * collapses equals by key and filters them according to existence.
      * @param iterators collection with iterators
      * @return iterator after all transformations
      */

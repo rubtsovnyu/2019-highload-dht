@@ -24,7 +24,7 @@ public class MemTablePool implements Table, Closeable {
     private final AtomicBoolean stopFlag = new AtomicBoolean();
     private volatile MemTable currentMemTable;
 
-    public MemTablePool(final long flushThresholdInBytes) {
+    MemTablePool(final long flushThresholdInBytes) {
         this.flushThresholdInBytes = flushThresholdInBytes;
         currentMemTable = new MemTable();
         pendingFlush = new ConcurrentSkipListMap<>();
