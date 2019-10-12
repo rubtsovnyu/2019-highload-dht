@@ -24,7 +24,7 @@ public class MemTablePool implements Table, Closeable {
     private final AtomicBoolean stopFlag = new AtomicBoolean();
     private volatile MemTable currentMemTable;
 
-    public MemTablePool(long flushThresholdInBytes) {
+    public MemTablePool(final long flushThresholdInBytes) {
         this.flushThresholdInBytes = flushThresholdInBytes;
         currentMemTable = new MemTable();
         pendingFlush = new ConcurrentSkipListMap<>();
@@ -50,7 +50,7 @@ public class MemTablePool implements Table, Closeable {
     }
 
     @Override
-    public Iterator<Item> iterator(@NotNull ByteBuffer from) {
+    public Iterator<Item> iterator(@NotNull final ByteBuffer from) {
         readWriteLock.readLock().lock();
         final Collection<Iterator<Item>> iterators;
         try {
@@ -66,7 +66,7 @@ public class MemTablePool implements Table, Closeable {
     }
 
     @Override
-    public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) {
+    public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) {
         if (stopFlag.get()) {
             throw new IllegalStateException("Stopped");
         }
@@ -75,7 +75,7 @@ public class MemTablePool implements Table, Closeable {
     }
 
     @Override
-    public void remove(@NotNull ByteBuffer key) {
+    public void remove(@NotNull final ByteBuffer key) {
         if (stopFlag.get()) {
             throw new IllegalStateException("Stopped");
         }

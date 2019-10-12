@@ -15,7 +15,7 @@ public final class MemTable implements Table {
 
     private final SortedMap<ByteBuffer, Item> data;
     private final String uniqueID;
-    private AtomicLong sizeInBytes = new AtomicLong();
+    private final AtomicLong sizeInBytes = new AtomicLong();
 
     /**
      * Creates a new RAM-storage.

@@ -12,7 +12,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -92,17 +96,17 @@ public class MyDAO implements DAO {
 
     @NotNull
     @Override
-    public ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementExceptionLite {
-        final Iterator<Record> iter = iterator(key);
+    public ByteBuffer get(@NotNull final ByteBuffer key) throws IOException, NoSuchElementExceptionLite {
+        final var iter = iterator(key);
         if (!iter.hasNext()) {
             throw new NoSuchElementExceptionLite("Not found");
         }
 
         final Record next = iter.next();
-        if (next.getKey().equals(key)) {
-            return next.getValue();
-        } else {
+        if (!next.getKey().equals(key)) {
             throw new NoSuchElementExceptionLite("Not found");
+        } else {
+            return next.getValue();
         }
     }
 
@@ -127,7 +131,7 @@ public class MyDAO implements DAO {
     }
 
     private void flushTable(final Table table) throws IOException {
-        Iterator<Item> iterator = table.iterator(ByteBuffer.allocate(0));
+        final Iterator<Item> iterator = table.iterator(ByteBuffer.allocate(0));
         final Path flushedFilePath = SSTable.writeNewTable(iterator, ssTablesDir, table.getUniqueID());
         initNewSSTable(flushedFilePath.toFile());
         if (ssTables.size() > COMPACTION_THRESHOLD) {
@@ -147,8 +151,8 @@ public class MyDAO implements DAO {
         } finally {
             readWriteLock.readLock().unlock();
         }
-        Iterator<Item> itersTransform = IteratorUtils.itersTransform(iterators);
-        Path compactioned = SSTable.writeNewTable(itersTransform, ssTablesDir, UUID.randomUUID().toString());
+        final Iterator<Item> itersTransform = IteratorUtils.itersTransform(iterators);
+        final Path compactioned = SSTable.writeNewTable(itersTransform, ssTablesDir, UUID.randomUUID().toString());
         readWriteLock.writeLock().lock();
         try {
             ssTables.forEach(s -> removeFile(s.getTableFile().toPath()));

@@ -9,7 +9,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -68,7 +72,8 @@ public final class SSTable implements Table {
      * @throws IOException if something went wrong during writing
      */
 
-    public static Path writeNewTable(final Iterator<Item> items, final File ssTablesDir, final String uniqueID) throws IOException {
+    public static Path writeNewTable(final Iterator<Item> items,
+                                     final File ssTablesDir, final String uniqueID) throws IOException {
         final List<Long> offsets = new ArrayList<>();
         long offset = 0;
         offsets.add(offset);
@@ -214,12 +219,12 @@ public final class SSTable implements Table {
     }
 
     @Override
-    public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) {
+    public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) {
         throw new UnsupportedOperationException("Can't upsert a new value into SSTable.");
     }
 
     @Override
-    public void remove(@NotNull ByteBuffer key) {
+    public void remove(@NotNull final ByteBuffer key) {
         throw new UnsupportedOperationException("Can't remove a value from SSTable.");
     }
 }

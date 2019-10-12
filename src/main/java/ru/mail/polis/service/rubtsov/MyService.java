@@ -1,7 +1,14 @@
 package ru.mail.polis.service.rubtsov;
 
 import com.google.common.base.Charsets;
-import one.nio.http.*;
+import one.nio.http.HttpServer;
+import one.nio.http.HttpServerConfig;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.RequestMethod;
+import one.nio.http.Response;
 import one.nio.server.AcceptorConfig;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
@@ -12,7 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 
 public class MyService extends HttpServer implements Service {
-    private DAO dao;
+    private final DAO dao;
 
     public MyService(final int port,
                      @NotNull final DAO dao) throws IOException {
@@ -21,26 +28,31 @@ public class MyService extends HttpServer implements Service {
     }
 
     private static HttpServerConfig getConfig(final int port) {
-        HttpServerConfig serverConfig = new HttpServerConfig();
-        AcceptorConfig acceptorConfig = new AcceptorConfig();
+        final HttpServerConfig serverConfig = new HttpServerConfig();
+        final AcceptorConfig acceptorConfig = new AcceptorConfig();
         acceptorConfig.port = port;
         serverConfig.acceptors = new AcceptorConfig[]{acceptorConfig};
         return serverConfig;
     }
 
-
+    /**
+     * Receives a request to an entity and respond depending on the method
+     * @param id Entity iD
+     * @param request HTTP request
+     * @return HTTP response
+     */
     @Path("/v0/entity")
     public Response entity(@Param("id") final String id,
                            final Request request) {
         if (id == null || id.isEmpty()) {
             return new Response(Response.BAD_REQUEST, Response.EMPTY);
         }
-        ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    ByteBuffer value = dao.get(key).duplicate();
-                    byte[] responseBody = new byte[value.remaining()];
+                    final ByteBuffer value = dao.get(key).duplicate();
+                    final byte[] responseBody = new byte[value.remaining()];
                     value.get(responseBody);
                     return new Response(Response.OK, responseBody);
                 case Request.METHOD_PUT:
@@ -66,8 +78,8 @@ public class MyService extends HttpServer implements Service {
     }
 
     @Override
-    public void handleDefault(Request request, HttpSession session) throws IOException {
-        Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
+    public void handleDefault(final Request request, final HttpSession session) throws IOException {
+        final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
 
