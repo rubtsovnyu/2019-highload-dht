@@ -26,8 +26,6 @@ import java.util.stream.Stream;
  * Simple LSM based {@link DAO} implementation.
  */
 public class MyDAO implements DAO {
-    private static final int COMPACTION_THRESHOLD = 8;
-
     private final MemTablePool memTablePool;
     private final List<SSTable> ssTables;
     private final File ssTablesDir;
