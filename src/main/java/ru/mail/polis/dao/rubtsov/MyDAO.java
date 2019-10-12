@@ -25,7 +25,6 @@ import java.util.stream.Stream;
 /**
  * Simple LSM based {@link DAO} implementation.
  */
-
 public class MyDAO implements DAO {
     private static final int COMPACTION_THRESHOLD = 8;
 
@@ -42,7 +41,6 @@ public class MyDAO implements DAO {
      * @param dataFolder      the folder which SSTables will be contained.
      * @param heapSizeInBytes JVM max heap size
      */
-
     public MyDAO(final File dataFolder, final long heapSizeInBytes) throws IOException {
         memTablePool = new MemTablePool(heapSizeInBytes / 64);
         ssTablesDir = dataFolder;
@@ -133,9 +131,6 @@ public class MyDAO implements DAO {
         final Iterator<Item> iterator = table.iterator(ByteBuffer.allocate(0));
         final Path flushedFilePath = SSTable.writeNewTable(iterator, ssTablesDir, table.getUniqueID());
         initNewSSTable(flushedFilePath.toFile());
-        if (ssTables.size() > COMPACTION_THRESHOLD) {
-            compact();
-        }
     }
 
     @Override

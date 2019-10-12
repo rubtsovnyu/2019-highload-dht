@@ -24,7 +24,6 @@ import static com.google.common.io.Files.getNameWithoutExtension;
 /**
  * Part of storage located at disk.
  */
-
 public final class SSTable implements Table {
     static final String VALID_FILE_EXTENSTION = ".dat";
     private static final String TEMP_FILE_EXTENSTION = ".tmp";
@@ -39,7 +38,6 @@ public final class SSTable implements Table {
      * @param tableFile file with data
      * @throws IllegalArgumentException if file corrupted
      */
-
     public SSTable(final File tableFile) throws IOException {
         this.tableFile = tableFile;
         try (FileChannel fileChannel = (FileChannel) Files.newByteChannel(
@@ -68,12 +66,13 @@ public final class SSTable implements Table {
      *
      * @param items       iterator of data that should be written
      * @param ssTablesDir data files directory
+     * @param uniqueID table unique ID
      * @return path of new file
      * @throws IOException if something went wrong during writing
      */
-
     public static Path writeNewTable(final Iterator<Item> items,
-                                     final File ssTablesDir, final String uniqueID) throws IOException {
+                                     final File ssTablesDir,
+                                     final String uniqueID) throws IOException {
         final List<Long> offsets = new ArrayList<>();
         long offset = 0;
         offsets.add(offset);
@@ -175,7 +174,6 @@ public final class SSTable implements Table {
      *
      * @return file
      */
-
     public File getTableFile() {
         return tableFile;
     }
@@ -186,7 +184,6 @@ public final class SSTable implements Table {
      * @param from the key from which to start the iteration.
      * @return iterator
      */
-
     public Iterator<Item> iterator(final ByteBuffer from) {
         return new Iterator<>() {
             long pos = getPosition(from);

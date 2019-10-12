@@ -19,7 +19,6 @@ public final class TimeUtils {
      *
      * @return current time in nanos
      */
-
     public static long getCurrentTime() {
         final long systemCurrentTime = System.currentTimeMillis();
         if (millis.getAndSet(systemCurrentTime) != systemCurrentTime) {

@@ -60,7 +60,6 @@ public final class Item implements Comparable<Item> {
      *
      * @return size of item in bytes
      */
-
     public long getSizeInBytes() {
         final int keyRem = key.remaining();
         final int valRem = value.remaining();

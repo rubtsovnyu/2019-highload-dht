@@ -22,7 +22,7 @@ public class MemTablePool implements Table, Closeable {
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private final long flushThresholdInBytes;
     private final AtomicBoolean stopFlag = new AtomicBoolean();
-    private volatile MemTable currentMemTable;
+    private MemTable currentMemTable;
 
     MemTablePool(final long flushThresholdInBytes) {
         this.flushThresholdInBytes = flushThresholdInBytes;
@@ -71,7 +71,12 @@ public class MemTablePool implements Table, Closeable {
         if (stopFlag.get()) {
             throw new IllegalStateException("Stopped");
         }
-        currentMemTable.upsert(key, value);
+        readWriteLock.readLock().lock();
+        try {
+            currentMemTable.upsert(key, value);
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
         enqueueFlush();
     }
 
@@ -80,7 +85,12 @@ public class MemTablePool implements Table, Closeable {
         if (stopFlag.get()) {
             throw new IllegalStateException("Stopped");
         }
-        currentMemTable.remove(key);
+        readWriteLock.readLock().lock();
+        try {
+            currentMemTable.remove(key);
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
         enqueueFlush();
     }
 
@@ -128,7 +138,6 @@ public class MemTablePool implements Table, Closeable {
         } finally {
             readWriteLock.writeLock().unlock();
         }
-
     }
 
     @Override

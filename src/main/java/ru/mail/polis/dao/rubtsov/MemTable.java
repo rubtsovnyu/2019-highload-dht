@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Part of storage located in RAM.
  */
-
 public final class MemTable implements Table {
 
     private final SortedMap<ByteBuffer, Item> data;
@@ -20,7 +19,6 @@ public final class MemTable implements Table {
     /**
      * Creates a new RAM-storage.
      */
-
     public MemTable() {
         data = new ConcurrentSkipListMap<>();
         uniqueID = UUID.randomUUID().toString();
@@ -38,7 +36,6 @@ public final class MemTable implements Table {
      * @param key   key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      */
-
     public void upsert(final ByteBuffer key, final ByteBuffer value) {
         final Item val = Item.of(key, value);
         calcNewSize(data.put(key, val), val);
@@ -49,7 +46,6 @@ public final class MemTable implements Table {
      *
      * @param key that should be removed
      */
-
     public void remove(final ByteBuffer key) {
         final Item dead = Item.removed(key);
         calcNewSize(data.put(key, dead), dead);
