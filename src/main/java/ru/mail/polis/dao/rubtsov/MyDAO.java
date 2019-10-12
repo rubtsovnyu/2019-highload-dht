@@ -105,9 +105,8 @@ public class MyDAO implements DAO {
         final Record next = iter.next();
         if (!next.getKey().equals(key)) {
             throw new NoSuchElementExceptionLite("Not found");
-        } else {
-            return next.getValue();
         }
+        return next.getValue();
     }
 
     @Override
