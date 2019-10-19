@@ -1,31 +1,39 @@
 package ru.mail.polis.service.rubtsov;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
-import one.nio.http.Param;
 import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.RequestMethod;
 import one.nio.http.Response;
 import one.nio.server.AcceptorConfig;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static com.google.common.base.Charsets.UTF_8;
 
 public class MyService extends HttpServer implements Service {
     private final DAO dao;
+    private final Executor myWorkers;
+    private final Logger logger = LoggerFactory.getLogger(MyService.class);
 
     public MyService(final int port,
                      @NotNull final DAO dao) throws IOException {
         super(getConfig(port));
         this.dao = dao;
+        this.myWorkers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+                new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
     }
 
     private static HttpServerConfig getConfig(final int port) {
@@ -36,31 +44,36 @@ public class MyService extends HttpServer implements Service {
         return serverConfig;
     }
 
-    /**
-     * Receives a request to an entity and respond depending on the method.
-     * @param id Entity iD
-     * @param request HTTP request
-     * @return HTTP response
-     */
-    @Path("/v0/entity")
-    public Response entity(@Param("id") final String id,
-                           final Request request) {
+    @Path("/v0/status")
+    @RequestMethod(Request.METHOD_GET)
+    public Response status(final Request request) {
+        return new Response(Response.OK, Response.EMPTY);
+    }
+
+    private void entity(
+            @NotNull final Request request,
+            @NotNull final HttpSession session) throws IOException {
+        final String id = request.getParameter("id=");
         if (id == null || id.isEmpty()) {
-            return new Response(Response.BAD_REQUEST, Response.EMPTY);
+            session.sendError(Response.BAD_REQUEST, "No id presented");
+            return;
         }
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    return get(id);
+                    executeAsync(session, () -> get(id));
+                    return;
                 case Request.METHOD_PUT:
-                    return upsert(id, request.getBody());
+                    executeAsync(session, () -> upsert(id, request.getBody()));
+                    return;
                 case Request.METHOD_DELETE:
-                    return remove(id);
+                    executeAsync(session, () -> remove(id));
+                    return;
                 default:
-                    return new Response(Response.METHOD_NOT_ALLOWED, Response.EMPTY);
+                    session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
             }
         } catch (Exception e) {
-            return new Response(Response.INTERNAL_ERROR, Response.EMPTY);
+            session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
         }
     }
 
@@ -86,16 +99,38 @@ public class MyService extends HttpServer implements Service {
         return new Response(Response.ACCEPTED, Response.EMPTY);
     }
 
-    @Path("/v0/status")
-    @RequestMethod(Request.METHOD_GET)
-    public Response status(final Request request) {
-        return new Response(Response.OK, Response.EMPTY);
+    @Override
+    public void handleDefault(final Request request,
+                              final HttpSession session) throws IOException {
+        switch (request.getPath()) {
+            case "/v0/entity":
+                entity(request, session);
+                break;
+            case "/v0/entities":
+//                entities(request, session);
+                break;
+            default:
+                session.sendError(Response.BAD_REQUEST, "Invalid path");
+        }
     }
 
-    @Override
-    public void handleDefault(final Request request, final HttpSession session) throws IOException {
-        final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
-        session.sendResponse(response);
+    private void executeAsync(final HttpSession httpSession, final Action action) {
+        myWorkers.execute(() -> {
+            try {
+                httpSession.sendResponse(action.act());
+            } catch (Exception e) {
+                try {
+                    httpSession.sendError(Response.INTERNAL_ERROR, e.getMessage());
+                } catch (IOException ex) {
+                    logger.error("Error during request process", ex);
+                }
+            }
+        });
+    }
+
+    @FunctionalInterface
+    interface Action {
+        Response act() throws IOException;
     }
 
 }
