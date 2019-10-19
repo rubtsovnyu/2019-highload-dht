@@ -8,15 +8,19 @@ import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.RequestMethod;
 import one.nio.http.Response;
+import one.nio.net.Socket;
 import one.nio.server.AcceptorConfig;
+import one.nio.server.RejectedSessionException;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -32,7 +36,8 @@ public class MyService extends HttpServer implements Service {
                      @NotNull final DAO dao) throws IOException {
         super(getConfig(port));
         this.dao = dao;
-        this.myWorkers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+        this.myWorkers = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
     }
 
@@ -77,6 +82,32 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
+    private void entities(
+            @NotNull final Request request,
+            @NotNull final HttpSession session) throws IOException {
+        final String start = request.getParameter("start=");
+        if (start == null || start.isEmpty()) {
+            session.sendError(Response.BAD_REQUEST, "No start presented");
+            return;
+        }
+        if (request.getMethod() != Request.METHOD_GET) {
+            session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
+            return;
+        }
+        String end = request.getParameter("end=");
+        if (end != null && end.isEmpty()) {
+            end = null;
+        }
+        final Iterator<Record> recordIterator = dao.range(
+                ByteBuffer.wrap(start.getBytes(UTF_8)),
+                end == null ? null : ByteBuffer.wrap(end.getBytes(UTF_8)));
+        try {
+            ((StreamSession) session).stream(recordIterator);
+        } catch (IOException e) {
+            logger.error("Error during stream of range from {} to {}", start, end, e);
+        }
+    }
+
     private Response get(final String key) throws IOException {
         final ByteBuffer value;
         try {
@@ -107,11 +138,16 @@ public class MyService extends HttpServer implements Service {
                 entity(request, session);
                 break;
             case "/v0/entities":
-//                entities(request, session);
+                entities(request, session);
                 break;
             default:
                 session.sendError(Response.BAD_REQUEST, "Invalid path");
         }
+    }
+
+    @Override
+    public HttpSession createSession(final Socket socket) throws RejectedSessionException {
+        return new StreamSession(socket, this);
     }
 
     private void executeAsync(final HttpSession httpSession, final Action action) {
