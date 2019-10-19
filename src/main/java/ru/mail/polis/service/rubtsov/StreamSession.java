@@ -67,24 +67,24 @@ public class StreamSession extends HttpSession {
                     .put(value)
                     .put(CRLF);
             write(chunk, 0, chunkLength);
+        }
 
-            if (!recordIterator.hasNext()) {
-                write(EMPTY_CHUNK, 0, EMPTY_CHUNK.length);
+        if (!recordIterator.hasNext()) {
+            write(EMPTY_CHUNK, 0, EMPTY_CHUNK.length);
 
-                server.incRequestsProcessed();
+            server.incRequestsProcessed();
 
-                if ((handling = pipeline.pollFirst()) != null) {
-                    if (handling == FIN) {
-                        scheduleClose();
-                    } else {
-                        try {
-                            server.handleRequest(handling, this);
-                        } catch (IOException e) {
-                            log.error("Can't process next request: " + handling, e);
-                        }
+            if ((handling = pipeline.pollFirst()) != null) {
+                if (handling == FIN) {
+                    scheduleClose();
+                } else {
+                    try {
+                        server.handleRequest(handling, this);
+                    } catch (IOException e) {
+                        log.error("Can't process next request: " + handling, e);
                     }
-
                 }
+
             }
         }
     }
