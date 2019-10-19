@@ -13,7 +13,7 @@ import java.util.Iterator;
 
 import static com.google.common.base.Charsets.UTF_8;
 
-public class StreamSession extends HttpSession {
+class StreamSession extends HttpSession {
     private static final byte[] CRLF = "\r\n".getBytes(UTF_8);
     private static final byte LF = '\n';
     private static final byte[] EMPTY_CHUNK = "0\r\n\r\n".getBytes(UTF_8);

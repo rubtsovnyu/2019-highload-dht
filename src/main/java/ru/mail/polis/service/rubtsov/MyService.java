@@ -1,9 +1,9 @@
 package ru.mail.polis.service.rubtsov;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
+import one.nio.http.Param;
 import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.RequestMethod;
@@ -22,30 +22,27 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import static com.google.common.base.Charsets.UTF_8;
 
 public class MyService extends HttpServer implements Service {
     private final DAO dao;
-    private final Executor myWorkers;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
 
     public MyService(final int port,
-                     @NotNull final DAO dao) throws IOException {
-        super(getConfig(port));
+                     @NotNull final DAO dao,
+                     final int workersNumber) throws IOException {
+        super(getConfig(port, workersNumber));
         this.dao = dao;
-        this.myWorkers = Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors(),
-                new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
     }
 
-    private static HttpServerConfig getConfig(final int port) {
+    private static HttpServerConfig getConfig(final int port, final int workersNumber) {
         final HttpServerConfig serverConfig = new HttpServerConfig();
         final AcceptorConfig acceptorConfig = new AcceptorConfig();
         acceptorConfig.port = port;
         serverConfig.acceptors = new AcceptorConfig[]{acceptorConfig};
+        serverConfig.minWorkers = workersNumber;
+        serverConfig.maxWorkers = workersNumber;
         return serverConfig;
     }
 
@@ -55,10 +52,18 @@ public class MyService extends HttpServer implements Service {
         return new Response(Response.OK, Response.EMPTY);
     }
 
-    private void entity(
+    /**
+     * Receives a request to an entity and respond depending on the method.
+     *
+     * @param id      Entity iD
+     * @param request HTTP request
+     * @param session HTTP session
+     */
+    @Path("/v0/entity")
+    public void entity(
+            @Param("id") final String id,
             @NotNull final Request request,
             @NotNull final HttpSession session) throws IOException {
-        final String id = request.getParameter("id=");
         if (id == null || id.isEmpty()) {
             session.sendError(Response.BAD_REQUEST, "No id presented");
             return;
@@ -82,26 +87,44 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
-    private void entities(
+    /**
+     * Receives a request for a range of values and returns it
+     * by chunked transfer encoding mechanism.
+     *
+     * @param start   Start key
+     * @param end     End key
+     * @param request HTTP request
+     * @param session HTTP session
+     */
+    @Path("/v0/entities")
+    public void entities(
+            @Param("start") final String start,
+            @Param("end") final String end,
             @NotNull final Request request,
-            @NotNull final HttpSession session) throws IOException {
-        final String start = request.getParameter("start=");
-        if (start == null || start.isEmpty()) {
-            session.sendError(Response.BAD_REQUEST, "No start presented");
-            return;
-        }
-        if (request.getMethod() != Request.METHOD_GET) {
-            session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
-            return;
-        }
-        String end = request.getParameter("end=");
-        if (end != null && end.isEmpty()) {
-            end = null;
-        }
-        final Iterator<Record> recordIterator = dao.range(
-                ByteBuffer.wrap(start.getBytes(UTF_8)),
-                end == null ? null : ByteBuffer.wrap(end.getBytes(UTF_8)));
+            @NotNull final HttpSession session) {
         try {
+            if (start == null || start.isEmpty()) {
+                session.sendError(Response.BAD_REQUEST, "No start presented");
+                return;
+            }
+            if (request.getMethod() != Request.METHOD_GET) {
+                session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
+                return;
+            }
+            if (end != null && end.isEmpty()) {
+                session.sendError(Response.BAD_REQUEST, "End should not be empty");
+            }
+        } catch (IOException e) {
+            try {
+                session.sendError(Response.INTERNAL_ERROR, null);
+            } catch (IOException ex) {
+                logger.error("Something went wrong during request processing", ex);
+            }
+        }
+        try {
+            final Iterator<Record> recordIterator = dao.range(
+                    ByteBuffer.wrap(start.getBytes(UTF_8)),
+                    end == null ? null : ByteBuffer.wrap(end.getBytes(UTF_8)));
             ((StreamSession) session).stream(recordIterator);
         } catch (IOException e) {
             logger.error("Error during stream of range from {} to {}", start, end, e);
@@ -133,16 +156,7 @@ public class MyService extends HttpServer implements Service {
     @Override
     public void handleDefault(final Request request,
                               final HttpSession session) throws IOException {
-        switch (request.getPath()) {
-            case "/v0/entity":
-                entity(request, session);
-                break;
-            case "/v0/entities":
-                entities(request, session);
-                break;
-            default:
-                session.sendError(Response.BAD_REQUEST, "Invalid path");
-        }
+        session.sendError(Response.BAD_REQUEST, "No.");
     }
 
     @Override
@@ -151,14 +165,14 @@ public class MyService extends HttpServer implements Service {
     }
 
     private void executeAsync(final HttpSession httpSession, final Action action) {
-        myWorkers.execute(() -> {
+        asyncExecute(() -> {
             try {
                 httpSession.sendResponse(action.act());
             } catch (Exception e) {
                 try {
                     httpSession.sendError(Response.INTERNAL_ERROR, e.getMessage());
                 } catch (IOException ex) {
-                    logger.error("Error during request process", ex);
+                    logger.error("Error during request processing", ex);
                 }
             }
         });
