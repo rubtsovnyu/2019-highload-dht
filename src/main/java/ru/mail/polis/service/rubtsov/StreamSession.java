@@ -21,7 +21,7 @@ class StreamSession extends HttpSession {
 
     private Iterator<Record> recordIterator;
 
-    StreamSession(Socket socket, HttpServer server) {
+    StreamSession(final Socket socket, final HttpServer server) {
         super(socket, server);
     }
 
@@ -31,7 +31,7 @@ class StreamSession extends HttpSession {
         return bytes;
     }
 
-    void stream(@NotNull Iterator<Record> recordIterator) throws IOException {
+    void stream(@NotNull final Iterator<Record> recordIterator) throws IOException {
         this.recordIterator = recordIterator;
 
         final Response response = new Response(Response.OK);
@@ -50,23 +50,9 @@ class StreamSession extends HttpSession {
 
     private void next() throws IOException {
         while (recordIterator.hasNext() && queueHead == null) {
-            final Record record = recordIterator.next();
-            final byte[] key = toByteArray(record.getKey());
-            final byte[] value = toByteArray(record.getValue());
-            final int recordLength = key.length + 1 + value.length;
-            final String size = Integer.toHexString(recordLength);
+            final byte[] chunk = recordToBytes(recordIterator.next());
 
-            final int chunkLength = size.length() + 2 + recordLength + 2;
-
-            final byte[] chunk = new byte[chunkLength];
-            final ByteBuffer byteBuffer = ByteBuffer.wrap(chunk);
-            byteBuffer.put(size.getBytes(UTF_8))
-                    .put(CRLF)
-                    .put(key)
-                    .put(LF)
-                    .put(value)
-                    .put(CRLF);
-            write(chunk, 0, chunkLength);
+            write(chunk, 0, chunk.length);
         }
 
         if (!recordIterator.hasNext()) {
@@ -87,5 +73,24 @@ class StreamSession extends HttpSession {
 
             }
         }
+    }
+
+    private byte[] recordToBytes(@NotNull final Record record) {
+        final byte[] key = toByteArray(record.getKey());
+        final byte[] value = toByteArray(record.getValue());
+        final int recordLength = key.length + 1 + value.length;
+        final String size = Integer.toHexString(recordLength);
+        final int chunkLength = size.length() + 2 + recordLength + 2;
+
+        final byte[] chunk = new byte[chunkLength];
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(chunk);
+        byteBuffer.put(size.getBytes(UTF_8))
+                .put(CRLF)
+                .put(key)
+                .put(LF)
+                .put(value)
+                .put(CRLF);
+
+        return chunk;
     }
 }

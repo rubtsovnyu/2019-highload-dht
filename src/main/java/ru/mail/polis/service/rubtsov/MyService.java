@@ -63,27 +63,35 @@ public class MyService extends HttpServer implements Service {
     public void entity(
             @Param("id") final String id,
             @NotNull final Request request,
-            @NotNull final HttpSession session) throws IOException {
+            @NotNull final HttpSession session) {
         if (id == null || id.isEmpty()) {
-            session.sendError(Response.BAD_REQUEST, "No id presented");
+            try {
+                session.sendError(Response.BAD_REQUEST, "No id presented");
+            } catch (IOException e) {
+                logger.error("Error during response", e);
+            }
             return;
         }
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
                     executeAsync(session, () -> get(id));
-                    return;
+                    break;
                 case Request.METHOD_PUT:
                     executeAsync(session, () -> upsert(id, request.getBody()));
-                    return;
+                    break;
                 case Request.METHOD_DELETE:
                     executeAsync(session, () -> remove(id));
-                    return;
+                    break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
             }
-        } catch (Exception e) {
-            session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
+        } catch (IOException e) {
+            try {
+                session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
+            } catch (IOException ex) {
+                logger.error("Error on sending error O_o", ex);
+            }
         }
     }
 
@@ -168,7 +176,7 @@ public class MyService extends HttpServer implements Service {
         asyncExecute(() -> {
             try {
                 httpSession.sendResponse(action.act());
-            } catch (Exception e) {
+            } catch (IOException e) {
                 try {
                     httpSession.sendError(Response.INTERNAL_ERROR, e.getMessage());
                 } catch (IOException ex) {
