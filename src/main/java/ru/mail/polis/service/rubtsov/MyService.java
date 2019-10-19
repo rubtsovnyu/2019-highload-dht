@@ -1,6 +1,5 @@
 package ru.mail.polis.service.rubtsov;
 
-import com.google.common.base.Charsets;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
@@ -17,6 +16,8 @@ import ru.mail.polis.service.Service;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
+
+import static com.google.common.base.Charsets.UTF_8;
 
 public class MyService extends HttpServer implements Service {
     private final DAO dao;
@@ -47,28 +48,42 @@ public class MyService extends HttpServer implements Service {
         if (id == null || id.isEmpty()) {
             return new Response(Response.BAD_REQUEST, Response.EMPTY);
         }
-        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    final ByteBuffer value = dao.get(key).duplicate();
-                    final byte[] responseBody = new byte[value.remaining()];
-                    value.get(responseBody);
-                    return new Response(Response.OK, responseBody);
+                    return get(id);
                 case Request.METHOD_PUT:
-                    dao.upsert(key, ByteBuffer.wrap(request.getBody()));
-                    return new Response(Response.CREATED, Response.EMPTY);
+                    return upsert(id, request.getBody());
                 case Request.METHOD_DELETE:
-                    dao.remove(key);
-                    return new Response(Response.ACCEPTED, Response.EMPTY);
+                    return remove(id);
                 default:
                     return new Response(Response.METHOD_NOT_ALLOWED, Response.EMPTY);
             }
-        } catch (NoSuchElementException e) {
-            return new Response(Response.NOT_FOUND, Response.EMPTY);
-        } catch (IOException e) {
+        } catch (Exception e) {
             return new Response(Response.INTERNAL_ERROR, Response.EMPTY);
         }
+    }
+
+    private Response get(final String key) throws IOException {
+        final ByteBuffer value;
+        try {
+            value = dao.get(ByteBuffer.wrap(key.getBytes(UTF_8))).duplicate();
+            final byte[] responseBody = new byte[value.remaining()];
+            value.get(responseBody);
+            return new Response(Response.OK, responseBody);
+        } catch (NoSuchElementException e) {
+            return new Response(Response.NOT_FOUND, Response.EMPTY);
+        }
+    }
+
+    private Response upsert(final String key, final byte[] value) throws IOException {
+        dao.upsert(ByteBuffer.wrap(key.getBytes(UTF_8)), ByteBuffer.wrap(value));
+        return new Response(Response.CREATED, Response.EMPTY);
+    }
+
+    private Response remove(final String key) throws IOException {
+        dao.remove(ByteBuffer.wrap(key.getBytes(UTF_8)));
+        return new Response(Response.ACCEPTED, Response.EMPTY);
     }
 
     @Path("/v0/status")

@@ -76,8 +76,8 @@ public class MyDAO implements DAO {
     }
 
     private Iterator<Item> itemIterator(@NotNull final ByteBuffer from) {
-        readWriteLock.readLock().lock();
         final Collection<Iterator<Item>> iterators;
+        readWriteLock.readLock().lock();
         try {
             iterators = new ArrayList<>(ssTables.size() + memTablePool.size());
             iterators.add(memTablePool.iterator(from));
@@ -133,8 +133,8 @@ public class MyDAO implements DAO {
 
     @Override
     public void compact() throws IOException {
-        readWriteLock.readLock().lock();
         final Collection<Iterator<Item>> iterators;
+        readWriteLock.readLock().lock();
         try {
             iterators = new ArrayList<>();
             for (final Table s : ssTables) {

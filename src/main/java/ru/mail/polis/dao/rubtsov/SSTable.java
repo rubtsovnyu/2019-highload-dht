@@ -87,7 +87,7 @@ public final class SSTable implements Table {
                 item = items.next();
                 final ByteBuffer key = item.getKey();
                 final ByteBuffer value = item.getValue();
-                final ByteBuffer row = ByteBuffer.allocate((int) item.getSizeInBytes());
+                final ByteBuffer row = ByteBuffer.allocate(item.getSizeInBytes());
                 row.putInt(key.remaining()).put(key.duplicate()).putLong(item.getTimeStamp());
                 if (!item.isRemoved()) {
                     row.putLong(value.remaining()).put(value.duplicate());
@@ -184,7 +184,8 @@ public final class SSTable implements Table {
      * @param from the key from which to start the iteration.
      * @return iterator
      */
-    public Iterator<Item> iterator(final ByteBuffer from) {
+    @Override
+    public Iterator<Item> iterator(@NotNull final ByteBuffer from) {
         return new Iterator<>() {
             long pos = getPosition(from);
 

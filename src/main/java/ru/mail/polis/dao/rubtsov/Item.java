@@ -60,7 +60,7 @@ public final class Item implements Comparable<Item> {
      *
      * @return size of item in bytes
      */
-    public long getSizeInBytes() {
+    public int getSizeInBytes() {
         final int keyRem = key.remaining();
         final int valRem = value.remaining();
         final int valLen = isRemoved() ? 0 : Long.BYTES;
@@ -71,7 +71,7 @@ public final class Item implements Comparable<Item> {
                 + valLen;
     }
 
-    public long getTimeStampAbs() {
+    private long getTimeStampAbs() {
         return Math.abs(timeStamp);
     }
 }

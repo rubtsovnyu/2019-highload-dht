@@ -1,5 +1,7 @@
 package ru.mail.polis.dao.rubtsov;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.SortedMap;
@@ -24,7 +26,8 @@ public final class MemTable implements Table {
         uniqueID = UUID.randomUUID().toString();
     }
 
-    public Iterator<Item> iterator(final ByteBuffer from) {
+    @Override
+    public Iterator<Item> iterator(@NotNull final ByteBuffer from) {
         return data.tailMap(from).values().iterator();
     }
 
@@ -36,7 +39,8 @@ public final class MemTable implements Table {
      * @param key   key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      */
-    public void upsert(final ByteBuffer key, final ByteBuffer value) {
+    @Override
+    public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) {
         final Item val = Item.of(key, value);
         calcNewSize(data.put(key, val), val);
     }
@@ -46,11 +50,13 @@ public final class MemTable implements Table {
      *
      * @param key that should be removed
      */
-    public void remove(final ByteBuffer key) {
+    @Override
+    public void remove(@NotNull final ByteBuffer key) {
         final Item dead = Item.removed(key);
         calcNewSize(data.put(key, dead), dead);
     }
 
+    @Override
     public long sizeInBytes() {
         return sizeInBytes.get();
     }
@@ -63,6 +69,7 @@ public final class MemTable implements Table {
         }
     }
 
+    @Override
     public String getUniqueID() {
         return uniqueID;
     }
