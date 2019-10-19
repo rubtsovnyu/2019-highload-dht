@@ -85,6 +85,7 @@ public class MyService extends HttpServer implements Service {
                     break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
+                    break;
             }
         } catch (IOException e) {
             try {
