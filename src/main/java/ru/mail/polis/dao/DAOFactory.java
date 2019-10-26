@@ -16,11 +16,10 @@
 
 package ru.mail.polis.dao;
 
-import org.jetbrains.annotations.NotNull;
-import ru.mail.polis.dao.rubtsov.MyDAO;
-
 import java.io.File;
 import java.io.IOException;
+
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Custom {@link DAO} factory.
@@ -54,6 +53,6 @@ public final class DAOFactory {
             throw new IllegalArgumentException("Path is not a directory: " + data);
         }
 
-        return new MyDAO(data, MAX_HEAP);
+        throw new IllegalStateException("Not implemented yet");
     }
 }
