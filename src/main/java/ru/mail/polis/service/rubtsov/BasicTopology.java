@@ -13,7 +13,12 @@ public class BasicTopology implements Topology<String> {
     @NotNull
     private final String[] nodes;
 
-    public BasicTopology(@NotNull String me, @NotNull Set<String> nodes) {
+    /**
+     * Create simple topology implementation
+     * @param me Current node
+     * @param nodes All nodes
+     */
+    public BasicTopology(@NotNull final String me, @NotNull final Set<String> nodes) {
         this.me = me;
         Preconditions.checkArgument(nodes.contains(me), "Invalid topology");
         this.nodes = new String[nodes.size()];
@@ -22,13 +27,13 @@ public class BasicTopology implements Topology<String> {
     }
 
     @Override
-    public boolean isMe(@NotNull String node) {
+    public boolean isMe(@NotNull final String node) {
         return me.equals(node);
     }
 
     @NotNull
     @Override
-    public String primaryFor(@NotNull ByteBuffer key) {
+    public String primaryFor(@NotNull final ByteBuffer key) {
         final int keyHashCode = key.hashCode();
         final int node = (keyHashCode & Integer.MAX_VALUE) % nodes.length;
         return nodes[node];

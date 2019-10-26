@@ -37,16 +37,24 @@ public class MyService extends HttpServer implements Service {
     private final Topology<String> topology;
     private final Map<String, HttpClient> pool;
 
+    /**
+     * Create new service.
+     * @param port Service port
+     * @param dao Service DAO
+     * @param workersNumber Workers number
+     * @param topology Topology
+     * @throws IOException
+     */
     public MyService(final int port,
                      @NotNull final DAO dao,
                      final int workersNumber,
-                     @NotNull Topology<String> topology) throws IOException {
+                     @NotNull final Topology<String> topology) throws IOException {
         super(getConfig(port, workersNumber));
         this.topology = topology;
         this.dao = dao;
 
         this.pool = new HashMap<>();
-        for (String node :
+        for (final String node :
                 topology.all()) {
             if (topology.isMe(node)) {
                 continue;
