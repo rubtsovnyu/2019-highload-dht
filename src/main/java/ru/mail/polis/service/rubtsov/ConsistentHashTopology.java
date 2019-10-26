@@ -15,6 +15,13 @@ public class ConsistentHashTopology implements Topology<String> {
     @NotNull
     private final String me;
 
+    /**
+     * Create a consistent hashing topology.
+     *
+     * @param range Range for CH
+     * @param nodes All nodes
+     * @param me    Current node
+     */
     public ConsistentHashTopology(final int range, @NotNull final Set<String> nodes, @NotNull final String me) {
         this.range = range;
         this.nodes = new HashMap<>(range * 2 + 1);
