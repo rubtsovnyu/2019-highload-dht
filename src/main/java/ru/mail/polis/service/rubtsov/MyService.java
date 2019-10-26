@@ -209,7 +209,6 @@ public class MyService extends HttpServer implements Service {
 
     private Response proxy(final String node, final Request request) throws IOException{
         try {
-            logger.info("Proxying to node: " + node);
             return pool.get(node).invoke(request);
         } catch (InterruptedException | PoolException | HttpException e) {
             throw new IOException("Proxying failed", e);
