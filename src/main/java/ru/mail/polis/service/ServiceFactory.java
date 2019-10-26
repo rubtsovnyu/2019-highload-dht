@@ -22,6 +22,7 @@ import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
+import ru.mail.polis.service.rubtsov.MyService;
 
 /**
  * Constructs {@link Service} instances.
@@ -56,6 +57,6 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-        throw new IllegalStateException();
+        return new MyService(port, dao, Runtime.getRuntime().availableProcessors());
     }
 }
