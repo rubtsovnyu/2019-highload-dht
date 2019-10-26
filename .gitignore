@@ -15,6 +15,7 @@
 !checkstyle.xml
 !.codeclimate.yml
 !profiling_sharding/*
+!profiling_async/*
 
 # ...even if they are in subdirectories
 !*/
