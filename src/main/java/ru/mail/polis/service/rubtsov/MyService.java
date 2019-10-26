@@ -1,5 +1,7 @@
 package ru.mail.polis.service.rubtsov;
 
+import one.nio.http.HttpClient;
+import one.nio.http.HttpException;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
@@ -8,7 +10,9 @@ import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.RequestMethod;
 import one.nio.http.Response;
+import one.nio.net.ConnectionString;
 import one.nio.net.Socket;
+import one.nio.pool.PoolException;
 import one.nio.server.AcceptorConfig;
 import one.nio.server.RejectedSessionException;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +24,9 @@ import ru.mail.polis.service.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static com.google.common.base.Charsets.UTF_8;
@@ -28,12 +34,25 @@ import static com.google.common.base.Charsets.UTF_8;
 public class MyService extends HttpServer implements Service {
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
+    private final Topology<String> topology;
+    private final Map<String, HttpClient> pool;
 
     public MyService(final int port,
                      @NotNull final DAO dao,
-                     final int workersNumber) throws IOException {
+                     final int workersNumber,
+                     @NotNull Topology<String> topology) throws IOException {
         super(getConfig(port, workersNumber));
+        this.topology = topology;
         this.dao = dao;
+
+        this.pool = new HashMap<>();
+        for (String node :
+                topology.all()) {
+            if (topology.isMe(node)) {
+                continue;
+            }
+            pool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
+        }
     }
 
     private static HttpServerConfig getConfig(final int port, final int workersNumber) {
@@ -72,16 +91,23 @@ public class MyService extends HttpServer implements Service {
             }
             return;
         }
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
+        final String primary = topology.primaryFor(key);
         try {
+            if (!topology.isMe(primary)) {
+                executeAsync(session, () -> proxy(primary, request));
+                return;
+            }
+
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    executeAsync(session, () -> get(id));
+                    executeAsync(session, () -> get(key));
                     break;
                 case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(id, request.getBody()));
+                    executeAsync(session, () -> upsert(key, request.getBody()));
                     break;
                 case Request.METHOD_DELETE:
-                    executeAsync(session, () -> remove(id));
+                    executeAsync(session, () -> remove(key));
                     break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
@@ -140,10 +166,10 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
-    private Response get(final String key) throws IOException {
+    private Response get(final ByteBuffer key) throws IOException {
         final ByteBuffer value;
         try {
-            value = dao.get(ByteBuffer.wrap(key.getBytes(UTF_8))).duplicate();
+            value = dao.get(key).duplicate();
             final byte[] responseBody = new byte[value.remaining()];
             value.get(responseBody);
             return new Response(Response.OK, responseBody);
@@ -152,13 +178,13 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
-    private Response upsert(final String key, final byte[] value) throws IOException {
-        dao.upsert(ByteBuffer.wrap(key.getBytes(UTF_8)), ByteBuffer.wrap(value));
+    private Response upsert(final ByteBuffer key, final byte[] value) throws IOException {
+        dao.upsert(key, ByteBuffer.wrap(value));
         return new Response(Response.CREATED, Response.EMPTY);
     }
 
-    private Response remove(final String key) throws IOException {
-        dao.remove(ByteBuffer.wrap(key.getBytes(UTF_8)));
+    private Response remove(final ByteBuffer key) throws IOException {
+        dao.remove(key);
         return new Response(Response.ACCEPTED, Response.EMPTY);
     }
 
@@ -171,6 +197,15 @@ public class MyService extends HttpServer implements Service {
     @Override
     public HttpSession createSession(final Socket socket) throws RejectedSessionException {
         return new StreamSession(socket, this);
+    }
+
+    private Response proxy(final String node, final Request request) throws IOException{
+        try {
+            logger.info("Proxying to node: " + node);
+            return pool.get(node).invoke(request);
+        } catch (InterruptedException | PoolException | HttpException e) {
+            throw new IOException("Proxying failed", e);
+        }
     }
 
     private void executeAsync(final HttpSession httpSession, final Action action) {

@@ -16,13 +16,14 @@
 
 package ru.mail.polis.service;
 
+import org.jetbrains.annotations.NotNull;
+import ru.mail.polis.dao.DAO;
+import ru.mail.polis.service.rubtsov.BasicTopology;
+import ru.mail.polis.service.rubtsov.MyService;
+import ru.mail.polis.service.rubtsov.Topology;
+
 import java.io.IOException;
 import java.util.Set;
-
-import org.jetbrains.annotations.NotNull;
-
-import ru.mail.polis.dao.DAO;
-import ru.mail.polis.service.rubtsov.MyService;
 
 /**
  * Constructs {@link Service} instances.
@@ -57,6 +58,10 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-        return new MyService(port, dao, Runtime.getRuntime().availableProcessors());
+        final int workersNumber = Runtime.getRuntime().availableProcessors();
+
+        final Topology<String> nodes = new BasicTopology("http://localhost:" + port, topology);
+
+        return new MyService(port, dao, workersNumber, nodes);
     }
 }
