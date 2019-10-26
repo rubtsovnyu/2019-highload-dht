@@ -43,7 +43,7 @@ public class MyService extends HttpServer implements Service {
      * @param dao Service DAO
      * @param workersNumber Workers number
      * @param topology Topology
-     * @throws IOException
+     * @throws IOException Sometimes something went wrong
      */
     public MyService(final int port,
                      @NotNull final DAO dao,

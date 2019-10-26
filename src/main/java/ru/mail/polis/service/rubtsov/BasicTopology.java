@@ -14,7 +14,7 @@ public class BasicTopology implements Topology<String> {
     private final String[] nodes;
 
     /**
-     * Create simple topology implementation
+     * Create simple topology implementation.
      * @param me Current node
      * @param nodes All nodes
      */
