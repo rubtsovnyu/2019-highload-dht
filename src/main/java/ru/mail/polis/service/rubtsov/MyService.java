@@ -59,7 +59,7 @@ public class MyService extends HttpServer implements Service {
             if (topology.isMe(node)) {
                 continue;
             }
-            pool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
+            pool.put(node, new HttpClient(new ConnectionString(node)));
         }
     }
 

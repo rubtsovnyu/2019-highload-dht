@@ -22,7 +22,9 @@ public class ConsistentHashTopology implements Topology<String> {
      * @param nodes All nodes
      * @param me    Current node
      */
-    public ConsistentHashTopology(final int range, @NotNull final Set<String> nodes, @NotNull final String me) {
+    public ConsistentHashTopology(final int range,
+                                  @NotNull final Set<String> nodes,
+                                  @NotNull final String me) {
         this.range = range;
         this.nodes = new HashMap<>(range * 2 + 1);
         this.me = me;
