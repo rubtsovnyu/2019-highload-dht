@@ -32,6 +32,8 @@ import java.util.NoSuchElementException;
 import static com.google.common.base.Charsets.UTF_8;
 
 public class MyService extends HttpServer implements Service {
+    private static final int MIN_WORKERS = 4;
+
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
     private final Topology<String> topology;
@@ -50,6 +52,7 @@ public class MyService extends HttpServer implements Service {
                      final int workersNumber,
                      @NotNull final Topology<String> topology) throws IOException {
         super(getConfig(port, workersNumber));
+        logger.info("Starting service with port {}...", port);
         this.topology = topology;
         this.dao = dao;
 
@@ -59,8 +62,9 @@ public class MyService extends HttpServer implements Service {
             if (topology.isMe(node)) {
                 continue;
             }
-            pool.put(node, new HttpClient(new ConnectionString(node)));
+            pool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
         }
+        logger.info("Service with port {} started", this.port);
     }
 
     private static HttpServerConfig getConfig(final int port, final int workersNumber) {
@@ -68,8 +72,9 @@ public class MyService extends HttpServer implements Service {
         final AcceptorConfig acceptorConfig = new AcceptorConfig();
         acceptorConfig.port = port;
         serverConfig.acceptors = new AcceptorConfig[]{acceptorConfig};
-        serverConfig.minWorkers = workersNumber;
-        serverConfig.maxWorkers = workersNumber;
+        final int rightWorkers = Math.max(workersNumber, MIN_WORKERS);
+        serverConfig.minWorkers = rightWorkers;
+        serverConfig.maxWorkers = rightWorkers;
         return serverConfig;
     }
 
@@ -213,6 +218,18 @@ public class MyService extends HttpServer implements Service {
         } catch (InterruptedException | PoolException | HttpException e) {
             throw new IOException("Proxying failed", e);
         }
+    }
+
+    @Override
+    public synchronized void stop() {
+        logger.info("Stopping service with port {}...", port);
+        super.stop();
+        try {
+            dao.close();
+        } catch (IOException e) {
+            logger.error("Can't stop DAO, port {}", port);
+        }
+        logger.info("Service with port {} stopped", port);
     }
 
     private void executeAsync(final HttpSession httpSession, final Action action) {

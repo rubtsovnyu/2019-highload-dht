@@ -57,6 +57,7 @@ public class MyDAO implements DAO {
         flushThread = new FlushThread();
         flushThread.start();
         readWriteLock = new ReentrantReadWriteLock();
+        logger.info("DAO in {} created", ssTablesDir.getAbsolutePath());
     }
 
     private void initNewSSTable(final File ssTableFile) throws IOException {
@@ -123,6 +124,7 @@ public class MyDAO implements DAO {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        logger.info("DAO in {} closed", ssTablesDir.getAbsolutePath());
     }
 
     private void flushTable(final Table table) throws IOException {
@@ -164,7 +166,7 @@ public class MyDAO implements DAO {
     }
 
     private class FlushThread extends Thread {
-        public FlushThread() {
+        FlushThread() {
             super("flusher");
         }
 
