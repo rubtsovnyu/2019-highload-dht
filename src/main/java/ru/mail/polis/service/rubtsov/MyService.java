@@ -163,8 +163,6 @@ public class MyService extends HttpServer implements Service {
             }
             return;
         }
-        boolean proxied = false;
-        proxied = isProxied(request);
         final ReplicationFactor repFactor;
         repFactor = replicas == null ? this.rf : ReplicationFactor.from(replicas);
         if (repFactor.getAck() < 1
@@ -178,7 +176,8 @@ public class MyService extends HttpServer implements Service {
                 return;
             }
         }
-        final boolean isProxied = proxied;
+        final boolean isProxied = isProxied(request);
+        ;
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
