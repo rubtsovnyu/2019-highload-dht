@@ -39,6 +39,7 @@ import static com.google.common.base.Charsets.UTF_8;
 public class MyService extends HttpServer implements Service {
     private static final int MIN_WORKERS = 4;
     private static final String PROXY_HEADER = "X-OK-Proxy: true";
+    private static final String ENTITY_PATH = "/v0/entity?id=";
     static final String TIMESTAMP_HEADER = "X-OK-Timestamp: ";
 
     private final DAO dao;
@@ -137,6 +138,10 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
+    private static boolean isProxied(@NotNull Request request) {
+        return request.getHeader(PROXY_HEADER) != null;
+    }
+
     /**
      * Receives a request to an entity and respond depending on the method.
      *
@@ -158,10 +163,10 @@ public class MyService extends HttpServer implements Service {
             }
             return;
         }
-        final boolean proxied = request.getHeader(PROXY_HEADER) != null;
-        final ReplicationFactor rf;
-        rf = replicas == null ? this.rf : ReplicationFactor.from(replicas);
-        if (rf.getAck() < 1 || rf.getFrom() < rf.getAck() || rf.getFrom() > topology.size()) {
+        final boolean proxied = isProxied(request);
+        final ReplicationFactor repFactor;
+        repFactor = replicas == null ? this.rf : ReplicationFactor.from(replicas);
+        if (repFactor.getAck() < 1 || repFactor.getFrom() < repFactor.getAck() || repFactor.getFrom() > topology.size()) {
             try {
                 session.sendError(Response.BAD_REQUEST, "Invalid replicas");
                 return;
@@ -177,13 +182,13 @@ public class MyService extends HttpServer implements Service {
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    executeAsync(session, () -> get(id, rf, proxied));
+                    executeAsync(session, () -> get(id, repFactor, proxied));
                     break;
                 case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(id, request.getBody(), rf, proxied));
+                    executeAsync(session, () -> upsert(id, request.getBody(), repFactor, proxied));
                     break;
                 case Request.METHOD_DELETE:
-                    executeAsync(session, () -> remove(id, rf, proxied));
+                    executeAsync(session, () -> remove(id, repFactor, proxied));
                     break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
@@ -219,11 +224,11 @@ public class MyService extends HttpServer implements Service {
             } else {
                 try {
                     final Response response = clientPool.get(node)
-                            .get("/v0/entity?id=" + id, PROXY_HEADER);
+                            .get(ENTITY_PATH + id, PROXY_HEADER);
                     asks++;
                     responseValues.add(ValueUtils.from(response));
                 } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {}, go next", node, e);
+                    logger.info("Can't get answer from {} for get an item", node, e);
                 }
             }
         }
@@ -256,12 +261,12 @@ public class MyService extends HttpServer implements Service {
             } else {
                 try {
                     final Response response = clientPool.get(node)
-                            .put("/v0/entity?id=" + id, valueArray, PROXY_HEADER);
+                            .put(ENTITY_PATH + id, valueArray, PROXY_HEADER);
                     if (response.getStatus() == 201) {
                         asks++;
                     }
                 } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {}, go next", node, e);
+                    logger.info("Can't get answer from {} for upsert an item", node, e);
                 }
             }
         }
@@ -292,12 +297,12 @@ public class MyService extends HttpServer implements Service {
             } else {
                 try {
                     final Response response = clientPool.get(node)
-                            .delete("/v0/entity?id=" + id, PROXY_HEADER);
+                            .delete(ENTITY_PATH + id, PROXY_HEADER);
                     if (response.getStatus() == 202) {
                         asks++;
                     }
                 } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {}, go next", node, e);
+                    logger.info("Can't get answer from {} for remove an item", node, e);
                 }
             }
         }

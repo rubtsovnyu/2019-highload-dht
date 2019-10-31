@@ -32,7 +32,7 @@ public final class MemTable implements Table {
     }
 
     @Override
-    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+    public Iterator<Item> latestIterator(@NotNull final ByteBuffer from) {
         return iterator(from);
     }
 

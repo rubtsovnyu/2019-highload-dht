@@ -57,7 +57,7 @@ public class MemTablePool implements Table, Closeable {
     }
 
     @Override
-    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+    public Iterator<Item> latestIterator(@NotNull final ByteBuffer from) {
         final Collection<Iterator<Item>> iterators = collectIters(from);
         return IteratorUtils.itersTransformWithRemoved(iterators);
     }

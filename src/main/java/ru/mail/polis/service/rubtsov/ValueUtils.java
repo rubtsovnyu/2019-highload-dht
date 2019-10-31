@@ -12,7 +12,7 @@ import java.util.Iterator;
 
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
-class ValueUtils {
+final class ValueUtils {
     private ValueUtils() {
     }
 
@@ -47,7 +47,7 @@ class ValueUtils {
             return Value.absent();
         }
 
-        Item item = items.next();
+        final Item item = items.next();
 
         if (!item.getKey().equals(key)) {
             return Value.absent();

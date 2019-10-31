@@ -6,7 +6,7 @@ public class ReplicationFactor {
     private final int ack;
     private final int from;
 
-    ReplicationFactor(int ack, int from) {
+    private ReplicationFactor(final int ack, final int from) {
         this.ack = ack;
         this.from = from;
     }
@@ -19,7 +19,7 @@ public class ReplicationFactor {
         return new ReplicationFactor(ack, from);
     }
 
-    public static ReplicationFactor quorum(final int nodesCount) {
+    static ReplicationFactor quorum(final int nodesCount) {
         final int quorum = nodesCount / 2 + 1;
         return new ReplicationFactor(quorum, nodesCount);
     }

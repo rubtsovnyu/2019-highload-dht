@@ -38,7 +38,7 @@ public final class SSTable implements Table {
      * @param tableFile file with data
      * @throws IllegalArgumentException if file corrupted
      */
-    public SSTable(final File tableFile) throws IOException {
+    SSTable(final File tableFile) throws IOException {
         this.tableFile = tableFile;
         try (FileChannel fileChannel = (FileChannel) Files.newByteChannel(
                 tableFile.toPath(), StandardOpenOption.READ)) {
@@ -70,9 +70,9 @@ public final class SSTable implements Table {
      * @return path of new file
      * @throws IOException if something went wrong during writing
      */
-    public static Path writeNewTable(final Iterator<Item> items,
-                                     final File ssTablesDir,
-                                     final String uniqueID) throws IOException {
+    static Path writeNewTable(final Iterator<Item> items,
+                              final File ssTablesDir,
+                              final String uniqueID) throws IOException {
         final List<Long> offsets = new ArrayList<>();
         long offset = 0;
         offsets.add(offset);
@@ -174,7 +174,7 @@ public final class SSTable implements Table {
      *
      * @return file
      */
-    public File getTableFile() {
+    File getTableFile() {
         return tableFile;
     }
 
@@ -207,7 +207,7 @@ public final class SSTable implements Table {
     }
 
     @Override
-    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+    public Iterator<Item> latestIterator(@NotNull final ByteBuffer from) {
         return iterator(from);
     }
 
