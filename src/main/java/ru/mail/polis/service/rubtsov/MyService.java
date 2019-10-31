@@ -177,7 +177,6 @@ public class MyService extends HttpServer implements Service {
             }
         }
         final boolean isProxied = isProxied(request);
-        ;
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
