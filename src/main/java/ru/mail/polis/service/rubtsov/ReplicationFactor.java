@@ -11,6 +11,12 @@ public class ReplicationFactor {
         this.from = from;
     }
 
+    /**
+     * Create replication factor from string in format "[ack]/[from]".
+     *
+     * @param replicas String with r/f
+     * @return Replication factor
+     */
     public static ReplicationFactor from(final String replicas) {
         final int separatorIndex = replicas.indexOf('/');
         Preconditions.checkArgument(separatorIndex != -1, "Invalid replicas!");

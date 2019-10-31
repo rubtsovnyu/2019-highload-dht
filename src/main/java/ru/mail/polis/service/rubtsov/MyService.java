@@ -138,7 +138,7 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
-    private static boolean isProxied(@NotNull Request request) {
+    private static boolean isProxied(@NotNull final Request request) {
         return request.getHeader(PROXY_HEADER) != null;
     }
 
@@ -163,10 +163,14 @@ public class MyService extends HttpServer implements Service {
             }
             return;
         }
-        final boolean proxied = isProxied(request);
+        boolean proxied = false;
+        proxied = isProxied(request);
+        final boolean isProxied = proxied;
         final ReplicationFactor repFactor;
         repFactor = replicas == null ? this.rf : ReplicationFactor.from(replicas);
-        if (repFactor.getAck() < 1 || repFactor.getFrom() < repFactor.getAck() || repFactor.getFrom() > topology.size()) {
+        if (repFactor.getAck() < 1
+                || repFactor.getFrom() < repFactor.getAck()
+                || repFactor.getFrom() > topology.size()) {
             try {
                 session.sendError(Response.BAD_REQUEST, "Invalid replicas");
                 return;
@@ -182,13 +186,13 @@ public class MyService extends HttpServer implements Service {
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    executeAsync(session, () -> get(id, repFactor, proxied));
+                    executeAsync(session, () -> get(id, repFactor, isProxied));
                     break;
                 case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(id, request.getBody(), repFactor, proxied));
+                    executeAsync(session, () -> upsert(id, request.getBody(), repFactor, isProxied));
                     break;
                 case Request.METHOD_DELETE:
-                    executeAsync(session, () -> remove(id, repFactor, proxied));
+                    executeAsync(session, () -> remove(id, repFactor, isProxied));
                     break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
