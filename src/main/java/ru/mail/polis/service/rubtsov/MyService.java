@@ -1,5 +1,6 @@
 package ru.mail.polis.service.rubtsov;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import one.nio.http.HttpClient;
 import one.nio.http.HttpException;
 import one.nio.http.HttpServer;
@@ -28,6 +29,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static com.google.common.base.Charsets.UTF_8;
 
@@ -38,24 +41,27 @@ public class MyService extends HttpServer implements Service {
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
     private final Topology<String> topology;
     private final Map<String, HttpClient> pool;
+    private final Executor myWorkers;
 
     /**
      * Create new service.
      * @param port Service port
      * @param dao Service DAO
-     * @param workersNumber Workers number
      * @param topology Topology
      * @throws IOException Sometimes something went wrong
      */
     public MyService(final int port,
                      @NotNull final DAO dao,
-                     final int workersNumber,
                      @NotNull final Topology<String> topology) throws IOException {
-        super(getConfig(port, workersNumber));
+        super(getConfig(port));
         logger.info("Starting service with port {}...", port);
         this.topology = topology;
         this.dao = dao;
-
+        final int workersNumber = Math.max(
+                Runtime.getRuntime().availableProcessors(), MIN_WORKERS);
+        myWorkers = Executors.newFixedThreadPool(
+                workersNumber,
+                new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
         this.pool = new HashMap<>();
         for (final String node :
                 topology.all()) {
@@ -67,14 +73,11 @@ public class MyService extends HttpServer implements Service {
         logger.info("Service with port {} started", this.port);
     }
 
-    private static HttpServerConfig getConfig(final int port, final int workersNumber) {
+    private static HttpServerConfig getConfig(final int port) {
         final HttpServerConfig serverConfig = new HttpServerConfig();
         final AcceptorConfig acceptorConfig = new AcceptorConfig();
         acceptorConfig.port = port;
         serverConfig.acceptors = new AcceptorConfig[]{acceptorConfig};
-        final int rightWorkers = Math.max(workersNumber, MIN_WORKERS);
-        serverConfig.minWorkers = rightWorkers;
-        serverConfig.maxWorkers = rightWorkers;
         return serverConfig;
     }
 
@@ -233,7 +236,7 @@ public class MyService extends HttpServer implements Service {
     }
 
     private void executeAsync(final HttpSession httpSession, final Action action) {
-        asyncExecute(() -> {
+        myWorkers.execute(() -> {
             try {
                 httpSession.sendResponse(action.act());
             } catch (IOException e) {

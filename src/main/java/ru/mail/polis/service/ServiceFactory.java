@@ -18,7 +18,7 @@ package ru.mail.polis.service;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.service.rubtsov.ConsistentHashTopology;
+import ru.mail.polis.service.rubtsov.BasicTopology;
 import ru.mail.polis.service.rubtsov.MyService;
 import ru.mail.polis.service.rubtsov.Topology;
 
@@ -58,10 +58,8 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-        final int workersNumber = Runtime.getRuntime().availableProcessors();
+        final Topology<String> nodes = new BasicTopology("http://localhost:" + port, topology);
 
-        final Topology<String> nodes = new ConsistentHashTopology(256, topology, "http://localhost:" + port);
-
-        return new MyService(port, dao, workersNumber, nodes);
+        return new MyService(port, dao, nodes);
     }
 }

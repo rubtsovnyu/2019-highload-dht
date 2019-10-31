@@ -335,89 +335,159 @@
     <text id="matched" x="1090" y="261"></text>
     <g id="frames">
         <g>
-            <title>all (185 samples, 100.00%)</title>
-            <rect x="10.0" y="227.0" width="1180.0" height="15" fill="#f16f6f" rx="2" ry="2"/>
+            <title>all (1,018 samples, 100.00%)</title>
+            <rect x="10.0" y="227.0" width="1180.0" height="15" fill="#fe8181" rx="2" ry="2"/>
             <text x="13.0" y="238.0">all</text>
         </g>
         <g>
-            <title>java/lang/Thread.run (185 samples, 100.00%)</title>
-            <rect x="10.0" y="211.0" width="1180.0" height="15" fill="#59ea59" rx="2" ry="2"/>
+            <title>java/lang/Thread.run (1,008 samples, 99.02%)</title>
+            <rect x="10.0" y="211.0" width="1168.4" height="15" fill="#6bfc6b" rx="2" ry="2"/>
             <text x="13.0" y="222.0">java/lang/Thread.run</text>
         </g>
         <g>
-            <title>java/util/concurrent/ThreadPoolExecutor$Worker.run (185 samples, 100.00%)</title>
-            <rect x="10.0" y="195.0" width="1180.0" height="15" fill="#50e150" rx="2" ry="2"/>
+            <title>java/util/concurrent/ThreadPoolExecutor$Worker.run (1,008 samples, 99.02%)</title>
+            <rect x="10.0" y="195.0" width="1168.4" height="15" fill="#68f968" rx="2" ry="2"/>
             <text x="13.0" y="206.0">java/util/concurrent/ThreadPoolExecutor$Worker.run</text>
         </g>
         <g>
-            <title>java/util/concurrent/ThreadPoolExecutor.runWorker (185 samples, 100.00%)</title>
-            <rect x="10.0" y="179.0" width="1180.0" height="15" fill="#5ff05f" rx="2" ry="2"/>
+            <title>java/util/concurrent/ThreadPoolExecutor.runWorker (1,008 samples, 99.02%)</title>
+            <rect x="10.0" y="179.0" width="1168.4" height="15" fill="#64f564" rx="2" ry="2"/>
             <text x="13.0" y="190.0">java/util/concurrent/ThreadPoolExecutor.runWorker</text>
         </g>
         <g>
-            <title>ru/mail/polis/service/rubtsov/MyService$$Lambda$69/406668019.run (185 samples, 100.00%)</title>
-            <rect x="10.0" y="163.0" width="1180.0" height="15" fill="#6bfc6b" rx="2" ry="2"/>
-            <text x="13.0" y="174.0">ru/mail/polis/service/rubtsov/MyService$$Lambda$69/406668019.run</text>
+            <title>ru/mail/polis/service/rubtsov/MyService$$Lambda$74/1821403972.run (1,008 samples, 99.02%)</title>
+            <rect x="10.0" y="163.0" width="1168.4" height="15" fill="#69fa69" rx="2" ry="2"/>
+            <text x="13.0" y="174.0">ru/mail/polis/service/rubtsov/MyService$$Lambda$74/1821403972.run</text>
         </g>
         <g>
-            <title>ru/mail/polis/service/rubtsov/MyService.lambda$executeAsync$4 (185 samples, 100.00%)</title>
-            <rect x="10.0" y="147.0" width="1180.0" height="15" fill="#69fa69" rx="2" ry="2"/>
+            <title>ru/mail/polis/service/rubtsov/MyService.lambda$executeAsync$4 (1,008 samples, 99.02%)</title>
+            <rect x="10.0" y="147.0" width="1168.4" height="15" fill="#5ced5c" rx="2" ry="2"/>
             <text x="13.0" y="158.0">ru/mail/polis/service/rubtsov/MyService.lambda$executeAsync$4</text>
         </g>
         <g>
-            <title>one/nio/http/HttpSession.sendResponse (180 samples, 97.30%)</title>
-            <rect x="10.0" y="131.0" width="1148.1" height="15" fill="#52e352" rx="2" ry="2"/>
+            <title>one/nio/http/HttpSession.sendResponse (981 samples, 96.37%)</title>
+            <rect x="10.0" y="131.0" width="1137.1" height="15" fill="#6bfc6b" rx="2" ry="2"/>
             <text x="13.0" y="142.0">one/nio/http/HttpSession.sendResponse</text>
         </g>
         <g>
-            <title>ru.mail.polis.service.rubtsov.StreamSession (180 samples, 97.30%)</title>
-            <rect x="10.0" y="115.0" width="1148.1" height="15" fill="#61cfcf" rx="2" ry="2"/>
+            <title>ru.mail.polis.service.rubtsov.StreamSession (981 samples, 96.37%)</title>
+            <rect x="10.0" y="115.0" width="1137.1" height="15" fill="#50bebe" rx="2" ry="2"/>
             <text x="13.0" y="126.0">ru.mail.polis.service.rubtsov.StreamSession</text>
         </g>
         <g>
-            <title>ru/mail/polis/service/rubtsov/MyService$$Lambda$65/1136778337.act (5 samples, 2.70%)</title>
-            <rect x="1158.1" y="131.0" width="31.9" height="15" fill="#5aeb5a" rx="2" ry="2"/>
-            <text x="1161.1" y="142.0">ru..</text>
+            <title>ru/mail/polis/service/rubtsov/MyService$$Lambda$71/993411733.act (27 samples, 2.65%)</title>
+            <rect x="1147.1" y="131.0" width="31.3" height="15" fill="#62f362" rx="2" ry="2"/>
+            <text x="1150.1" y="142.0">ru..</text>
         </g>
         <g>
-            <title>ru/mail/polis/service/rubtsov/MyService.lambda$entity$0 (5 samples, 2.70%)</title>
-            <rect x="1158.1" y="115.0" width="31.9" height="15" fill="#5dee5d" rx="2" ry="2"/>
-            <text x="1161.1" y="126.0">ru..</text>
+            <title>ru/mail/polis/service/rubtsov/MyService.lambda$entity$0 (27 samples, 2.65%)</title>
+            <rect x="1147.1" y="115.0" width="31.3" height="15" fill="#5eef5e" rx="2" ry="2"/>
+            <text x="1150.1" y="126.0">ru..</text>
         </g>
         <g>
-            <title>ru/mail/polis/service/rubtsov/MyService.proxy (5 samples, 2.70%)</title>
-            <rect x="1158.1" y="99.0" width="31.9" height="15" fill="#5eef5e" rx="2" ry="2"/>
-            <text x="1161.1" y="110.0">ru..</text>
+            <title>ru/mail/polis/service/rubtsov/MyService.proxy (27 samples, 2.65%)</title>
+            <rect x="1147.1" y="99.0" width="31.3" height="15" fill="#68f968" rx="2" ry="2"/>
+            <text x="1150.1" y="110.0">ru..</text>
         </g>
         <g>
-            <title>one/nio/http/HttpClient.invoke (5 samples, 2.70%)</title>
-            <rect x="1158.1" y="83.0" width="31.9" height="15" fill="#57e857" rx="2" ry="2"/>
-            <text x="1161.1" y="94.0">on..</text>
+            <title>one/nio/http/HttpClient.invoke (27 samples, 2.65%)</title>
+            <rect x="1147.1" y="83.0" width="31.3" height="15" fill="#58e958" rx="2" ry="2"/>
+            <text x="1150.1" y="94.0">on..</text>
         </g>
         <g>
-            <title>one/nio/http/HttpClient.invoke (5 samples, 2.70%)</title>
-            <rect x="1158.1" y="67.0" width="31.9" height="15" fill="#54e554" rx="2" ry="2"/>
-            <text x="1161.1" y="78.0">on..</text>
+            <title>one/nio/http/HttpClient.invoke (27 samples, 2.65%)</title>
+            <rect x="1147.1" y="67.0" width="31.3" height="15" fill="#60f160" rx="2" ry="2"/>
+            <text x="1150.1" y="78.0">on..</text>
         </g>
         <g>
-            <title>one/nio/pool/Pool.borrowObject (3 samples, 1.62%)</title>
-            <rect x="1158.1" y="51.0" width="19.1" height="15" fill="#50e150" rx="2" ry="2"/>
-            <text x="1161.1" y="62.0"></text>
+            <title>one/nio/pool/Pool.borrowObject (9 samples, 0.88%)</title>
+            <rect x="1147.1" y="51.0" width="10.4" height="15" fill="#5ff05f" rx="2" ry="2"/>
+            <text x="1150.1" y="62.0"></text>
         </g>
         <g>
-            <title>one.nio.http.HttpClient (3 samples, 1.62%)</title>
-            <rect x="1158.1" y="35.0" width="19.1" height="15" fill="#6cdada" rx="2" ry="2"/>
-            <text x="1161.1" y="46.0"></text>
+            <title>one.nio.http.HttpClient (9 samples, 0.88%)</title>
+            <rect x="1147.1" y="35.0" width="10.4" height="15" fill="#67d5d5" rx="2" ry="2"/>
+            <text x="1150.1" y="46.0"></text>
         </g>
         <g>
-            <title>one/nio/pool/Pool.returnObject (2 samples, 1.08%)</title>
-            <rect x="1177.2" y="51.0" width="12.8" height="15" fill="#54e554" rx="2" ry="2"/>
-            <text x="1180.2" y="62.0"></text>
+            <title>one/nio/pool/Pool.returnObject (18 samples, 1.77%)</title>
+            <rect x="1157.5" y="51.0" width="20.9" height="15" fill="#50e150" rx="2" ry="2"/>
+            <text x="1160.5" y="62.0"></text>
         </g>
         <g>
-            <title>one.nio.http.HttpClient (2 samples, 1.08%)</title>
-            <rect x="1177.2" y="35.0" width="12.8" height="15" fill="#56c4c4" rx="2" ry="2"/>
-            <text x="1180.2" y="46.0"></text>
+            <title>one.nio.http.HttpClient (18 samples, 1.77%)</title>
+            <rect x="1157.5" y="35.0" width="20.9" height="15" fill="#5fcdcd" rx="2" ry="2"/>
+            <text x="1160.5" y="46.0"></text>
+        </g>
+        <g>
+            <title>one/nio/server/AcceptorThread.run (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="211.0" width="1.2" height="15" fill="#58e958" rx="2" ry="2"/>
+            <text x="1181.4" y="222.0"></text>
+        </g>
+        <g>
+            <title>one/nio/server/Server.register (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="195.0" width="1.2" height="15" fill="#62f362" rx="2" ry="2"/>
+            <text x="1181.4" y="206.0"></text>
+        </g>
+        <g>
+            <title>one/nio/net/JavaSelector.register (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="179.0" width="1.2" height="15" fill="#68f968" rx="2" ry="2"/>
+            <text x="1181.4" y="190.0"></text>
+        </g>
+        <g>
+            <title>one/nio/net/JavaSelector.enable (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="163.0" width="1.2" height="15" fill="#51e251" rx="2" ry="2"/>
+            <text x="1181.4" y="174.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/KQueueSelectorImpl.wakeup (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="147.0" width="1.2" height="15" fill="#68f968" rx="2" ry="2"/>
+            <text x="1181.4" y="158.0"></text>
+        </g>
+        <g>
+            <title>java.lang.Object (1 samples, 0.10%)</title>
+            <rect x="1178.4" y="131.0" width="1.2" height="15" fill="#5ccaca" rx="2" ry="2"/>
+            <text x="1181.4" y="142.0"></text>
+        </g>
+        <g>
+            <title>one/nio/server/SelectorThread.run (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="211.0" width="10.4" height="15" fill="#60f160" rx="2" ry="2"/>
+            <text x="1182.6" y="222.0"></text>
+        </g>
+        <g>
+            <title>one/nio/net/JavaSelector.select (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="195.0" width="10.4" height="15" fill="#64f564" rx="2" ry="2"/>
+            <text x="1182.6" y="206.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/SelectorImpl.select (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="179.0" width="10.4" height="15" fill="#5ff05f" rx="2" ry="2"/>
+            <text x="1182.6" y="190.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/SelectorImpl.lockAndDoSelect (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="163.0" width="10.4" height="15" fill="#5aeb5a" rx="2" ry="2"/>
+            <text x="1182.6" y="174.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/KQueueSelectorImpl.doSelect (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="147.0" width="10.4" height="15" fill="#6cfd6c" rx="2" ry="2"/>
+            <text x="1182.6" y="158.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/KQueueSelectorImpl.processEvents (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="131.0" width="10.4" height="15" fill="#5ff05f" rx="2" ry="2"/>
+            <text x="1182.6" y="142.0"></text>
+        </g>
+        <g>
+            <title>sun/nio/ch/KQueueSelectorImpl.clearInterrupt (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="115.0" width="10.4" height="15" fill="#59ea59" rx="2" ry="2"/>
+            <text x="1182.6" y="126.0"></text>
+        </g>
+        <g>
+            <title>java.lang.Object (9 samples, 0.88%)</title>
+            <rect x="1179.6" y="99.0" width="10.4" height="15" fill="#62d0d0" rx="2" ry="2"/>
+            <text x="1182.6" y="110.0"></text>
         </g>
     </g>
 </svg>
