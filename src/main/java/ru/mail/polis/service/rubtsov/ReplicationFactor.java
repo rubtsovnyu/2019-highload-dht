@@ -2,7 +2,7 @@ package ru.mail.polis.service.rubtsov;
 
 import com.google.common.base.Preconditions;
 
-public class ReplicationFactor {
+public final class ReplicationFactor {
     private final int ack;
     private final int from;
 

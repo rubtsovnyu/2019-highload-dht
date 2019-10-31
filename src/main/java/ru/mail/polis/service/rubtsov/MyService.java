@@ -165,7 +165,6 @@ public class MyService extends HttpServer implements Service {
         }
         boolean proxied = false;
         proxied = isProxied(request);
-        final boolean isProxied = proxied;
         final ReplicationFactor repFactor;
         repFactor = replicas == null ? this.rf : ReplicationFactor.from(replicas);
         if (repFactor.getAck() < 1
@@ -175,14 +174,11 @@ public class MyService extends HttpServer implements Service {
                 session.sendError(Response.BAD_REQUEST, "Invalid replicas");
                 return;
             } catch (IOException e) {
-                try {
-                    session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
-                } catch (IOException ex) {
-                    logger.error("Error on sending error O_o", ex);
-                    return;
-                }
+                logger.error("Error on sending 400", e);
+                return;
             }
         }
+        final boolean isProxied = proxied;
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
