@@ -12,7 +12,7 @@ import java.util.Iterator;
 
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
-public class ValueUtils {
+class ValueUtils {
     private ValueUtils() {
     }
 

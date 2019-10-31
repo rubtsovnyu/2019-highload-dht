@@ -35,13 +35,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import static com.google.common.base.Charsets.UTF_8;
-//import static ru.mail.polis.service.rubtsov.ValueUtils.from;
-//import static ru.mail.polis.service.rubtsov.ValueUtils.merge;
-//import static ru.mail.polis.service.rubtsov.ValueUtils.value;
 
 public class MyService extends HttpServer implements Service {
     private static final int MIN_WORKERS = 4;
-    static final String PROXY_HEADER = "X-OK-Proxy: true";
+    private static final String PROXY_HEADER = "X-OK-Proxy: true";
     static final String TIMESTAMP_HEADER = "X-OK-Timestamp: ";
 
     private final DAO dao;
@@ -65,7 +62,7 @@ public class MyService extends HttpServer implements Service {
         logger.info("Starting service with port {}...", port);
         this.topology = topology;
         this.dao = dao;
-        rf = new ReplicationFactor(topology.size() / 2 + 1, topology.size());
+        rf = ReplicationFactor.quorum(topology.size());
         final int workersNumber = Math.max(
                 Runtime.getRuntime().availableProcessors(), MIN_WORKERS);
         myWorkers = Executors.newFixedThreadPool(

@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
-public class ServiceUtils {
+class ServiceUtils {
     private ServiceUtils() {
     }
 

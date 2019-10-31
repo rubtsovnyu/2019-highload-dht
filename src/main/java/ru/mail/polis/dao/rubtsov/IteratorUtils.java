@@ -6,7 +6,7 @@ import ru.mail.polis.dao.Iters;
 import java.util.Collection;
 import java.util.Iterator;
 
-public final class IteratorUtils {
+final class IteratorUtils {
     private IteratorUtils() {
     }
 

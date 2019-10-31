@@ -7,9 +7,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Simple nano time to avoid collisions.
  */
 
-public final class TimeUtils {
-    private static AtomicLong millis = new AtomicLong();
-    private static AtomicInteger additionalTime = new AtomicInteger();
+final class TimeUtils {
+    private static final AtomicLong millis = new AtomicLong();
+    private static final AtomicInteger additionalTime = new AtomicInteger();
 
     private TimeUtils() {
     }
@@ -19,7 +19,7 @@ public final class TimeUtils {
      *
      * @return current time in nanos
      */
-    public static long getCurrentTime() {
+    static long getCurrentTime() {
         final long systemCurrentTime = System.currentTimeMillis();
         if (millis.getAndSet(systemCurrentTime) != systemCurrentTime) {
             additionalTime.set(0);
