@@ -207,6 +207,11 @@ public final class SSTable implements Table {
     }
 
     @Override
+    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+        return iterator(from);
+    }
+
+    @Override
     public long sizeInBytes() {
         return tableFile.length();
     }

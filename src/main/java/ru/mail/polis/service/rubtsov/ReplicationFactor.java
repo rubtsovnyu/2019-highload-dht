@@ -1,0 +1,34 @@
+package ru.mail.polis.service.rubtsov;
+
+import com.google.common.base.Preconditions;
+
+public class ReplicationFactor {
+    private final int ack;
+    private final int from;
+
+    ReplicationFactor(int ack, int from) {
+        this.ack = ack;
+        this.from = from;
+    }
+
+    public static ReplicationFactor from(final String replicas) {
+        final int separatorIndex = replicas.indexOf('/');
+        Preconditions.checkArgument(separatorIndex != -1, "Invalid replicas!");
+        final int ack = Integer.parseInt(replicas.substring(0, separatorIndex));
+        final int from = Integer.parseInt(replicas.substring(separatorIndex + 1));
+        return new ReplicationFactor(ack, from);
+    }
+
+    public static ReplicationFactor quorum(final int nodesCount) {
+        final int quorum = nodesCount / 2 + 1;
+        return new ReplicationFactor(quorum, nodesCount);
+    }
+
+    int getAck() {
+        return ack;
+    }
+
+    int getFrom() {
+        return from;
+    }
+}

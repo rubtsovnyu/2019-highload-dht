@@ -21,7 +21,7 @@ public final class MemTable implements Table {
     /**
      * Creates a new RAM-storage.
      */
-    public MemTable() {
+    MemTable() {
         data = new ConcurrentSkipListMap<>();
         uniqueID = UUID.randomUUID().toString();
     }
@@ -29,6 +29,11 @@ public final class MemTable implements Table {
     @Override
     public Iterator<Item> iterator(@NotNull final ByteBuffer from) {
         return data.tailMap(from).values().iterator();
+    }
+
+    @Override
+    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+        return iterator(from);
     }
 
     /**

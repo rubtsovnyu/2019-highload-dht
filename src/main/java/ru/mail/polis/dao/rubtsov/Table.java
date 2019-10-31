@@ -16,6 +16,8 @@ public interface Table {
      */
     Iterator<Item> iterator(@NotNull final ByteBuffer from);
 
+    Iterator<Item> latestIterator(@NotNull final ByteBuffer from);
+
     /**
      * Put an entry in table.
      */

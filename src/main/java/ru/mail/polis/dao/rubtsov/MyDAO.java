@@ -77,18 +77,28 @@ public class MyDAO implements DAO {
     }
 
     private Iterator<Item> itemIterator(@NotNull final ByteBuffer from) {
+        return IteratorUtils.itersTransformWithoutRemoved(collectItems(from));
+    }
+
+    @NotNull
+    @Override
+    public Iterator<Item> latestIterator(@NotNull final ByteBuffer from) {
+        return IteratorUtils.itersTransformWithRemoved(collectItems(from));
+    }
+
+    private Collection<Iterator<Item>> collectItems(@NotNull final ByteBuffer from) {
         final Collection<Iterator<Item>> iterators;
         readWriteLock.readLock().lock();
         try {
             iterators = new ArrayList<>(ssTables.size() + memTablePool.size());
-            iterators.add(memTablePool.iterator(from));
+            iterators.add(memTablePool.latestIterator(from));
             for (final Table s : ssTables) {
                 iterators.add(s.iterator(from));
             }
         } finally {
             readWriteLock.readLock().unlock();
         }
-        return IteratorUtils.itersTransform(iterators);
+        return iterators;
     }
 
     @NotNull
@@ -128,7 +138,7 @@ public class MyDAO implements DAO {
     }
 
     private void flushTable(final Table table) throws IOException {
-        final Iterator<Item> iterator = table.iterator(ByteBuffer.allocate(0));
+        final Iterator<Item> iterator = table.latestIterator(ByteBuffer.allocate(0));
         final Path flushedFilePath = SSTable.writeNewTable(iterator, ssTablesDir, table.getUniqueID());
         initNewSSTable(flushedFilePath.toFile());
     }
@@ -145,7 +155,7 @@ public class MyDAO implements DAO {
         } finally {
             readWriteLock.readLock().unlock();
         }
-        final Iterator<Item> itersTransform = IteratorUtils.itersTransform(iterators);
+        final Iterator<Item> itersTransform = IteratorUtils.itersTransformWithoutRemoved(iterators);
         final Path compactioned = SSTable.writeNewTable(itersTransform, ssTablesDir, UUID.randomUUID().toString());
         readWriteLock.writeLock().lock();
         try {
@@ -179,7 +189,9 @@ public class MyDAO implements DAO {
                 try {
                     tableToFlush = memTablePool.takeToFlush();
                     poisonReceived = tableToFlush.isPoisonPill();
-                    flushTable(tableToFlush.getTable());
+                    if (tableToFlush.getTable().sizeInBytes() > 0) {
+                        flushTable(tableToFlush.getTable());
+                    }
                     memTablePool.flushed(tableToFlush.getTable().getUniqueID());
                 } catch (InterruptedException e) {
                     interrupt();

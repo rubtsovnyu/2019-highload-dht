@@ -52,6 +52,17 @@ public class MemTablePool implements Table, Closeable {
 
     @Override
     public Iterator<Item> iterator(@NotNull final ByteBuffer from) {
+        final Collection<Iterator<Item>> iterators = collectIters(from);
+        return IteratorUtils.itersTransformWithoutRemoved(iterators);
+    }
+
+    @Override
+    public Iterator<Item> latestIterator(@NotNull ByteBuffer from) {
+        final Collection<Iterator<Item>> iterators = collectIters(from);
+        return IteratorUtils.itersTransformWithRemoved(iterators);
+    }
+
+    private Collection<Iterator<Item>> collectIters(@NotNull final ByteBuffer from) {
         final Collection<Iterator<Item>> iterators;
         readWriteLock.readLock().lock();
         try {
@@ -63,7 +74,7 @@ public class MemTablePool implements Table, Closeable {
         } finally {
             readWriteLock.readLock().unlock();
         }
-        return IteratorUtils.itersTransform(iterators);
+        return iterators;
     }
 
     @Override
@@ -120,11 +131,6 @@ public class MemTablePool implements Table, Closeable {
                 }
             }
         }
-    }
-
-    public void clear() {
-        currentMemTable = new MemTable();
-        pendingFlush.clear();
     }
 
     TableToFlush takeToFlush() throws InterruptedException {

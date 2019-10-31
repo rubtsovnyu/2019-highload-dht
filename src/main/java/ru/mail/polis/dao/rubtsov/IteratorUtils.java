@@ -16,9 +16,12 @@ public final class IteratorUtils {
      * @param iterators collection with iterators
      * @return iterator after all transformations
      */
-    public static Iterator<Item> itersTransform(final Collection<Iterator<Item>> iterators) {
+    static Iterator<Item> itersTransformWithoutRemoved(final Collection<Iterator<Item>> iterators) {
+        return Iterators.filter(itersTransformWithRemoved(iterators), i -> !i.isRemoved());
+    }
+
+    static Iterator<Item> itersTransformWithRemoved(final Collection<Iterator<Item>> iterators) {
         final Iterator<Item> mergedIter = Iterators.mergeSorted(iterators, Item.COMPARATOR);
-        final Iterator<Item> collapsedIter = Iters.collapseEquals(mergedIter, Item::getKey);
-        return Iterators.filter(collapsedIter, i -> !i.isRemoved());
+        return Iters.collapseEquals(mergedIter, Item::getKey);
     }
 }

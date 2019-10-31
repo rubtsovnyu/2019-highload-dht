@@ -21,27 +21,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
+import ru.mail.polis.dao.rubtsov.Item;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import static com.google.common.base.Charsets.UTF_8;
+//import static ru.mail.polis.service.rubtsov.ValueUtils.from;
+//import static ru.mail.polis.service.rubtsov.ValueUtils.merge;
+//import static ru.mail.polis.service.rubtsov.ValueUtils.value;
 
 public class MyService extends HttpServer implements Service {
     private static final int MIN_WORKERS = 4;
+    static final String PROXY_HEADER = "X-OK-Proxy: true";
+    static final String TIMESTAMP_HEADER = "X-OK-Timestamp: ";
 
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
     private final Topology<String> topology;
-    private final Map<String, HttpClient> pool;
+    private final Map<String, HttpClient> clientPool;
     private final Executor myWorkers;
+    private final ReplicationFactor rf;
 
     /**
      * Create new service.
@@ -57,18 +65,19 @@ public class MyService extends HttpServer implements Service {
         logger.info("Starting service with port {}...", port);
         this.topology = topology;
         this.dao = dao;
+        rf = new ReplicationFactor(topology.size() / 2 + 1, topology.size());
         final int workersNumber = Math.max(
                 Runtime.getRuntime().availableProcessors(), MIN_WORKERS);
         myWorkers = Executors.newFixedThreadPool(
                 workersNumber,
                 new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
-        this.pool = new HashMap<>();
+        this.clientPool = new HashMap<>();
         for (final String node :
                 topology.all()) {
             if (topology.isMe(node)) {
                 continue;
             }
-            pool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
+            clientPool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
         }
         logger.info("Service with port {} started", this.port);
     }
@@ -85,57 +94,6 @@ public class MyService extends HttpServer implements Service {
     @RequestMethod(Request.METHOD_GET)
     public Response status(final Request request) {
         return new Response(Response.OK, Response.EMPTY);
-    }
-
-    /**
-     * Receives a request to an entity and respond depending on the method.
-     *
-     * @param id      Entity iD
-     * @param request HTTP request
-     * @param session HTTP session
-     */
-    @Path("/v0/entity")
-    public void entity(
-            @Param("id") final String id,
-            @NotNull final Request request,
-            @NotNull final HttpSession session) {
-        if (id == null || id.isEmpty()) {
-            try {
-                session.sendError(Response.BAD_REQUEST, "No id presented");
-            } catch (IOException e) {
-                logger.error("Error during response", e);
-            }
-            return;
-        }
-        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
-        final String primary = topology.primaryFor(key);
-        try {
-            if (!topology.isMe(primary)) {
-                executeAsync(session, () -> proxy(primary, request));
-                return;
-            }
-
-            switch (request.getMethod()) {
-                case Request.METHOD_GET:
-                    executeAsync(session, () -> get(key));
-                    break;
-                case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(key, request.getBody()));
-                    break;
-                case Request.METHOD_DELETE:
-                    executeAsync(session, () -> remove(key));
-                    break;
-                default:
-                    session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
-                    break;
-            }
-        } catch (IOException e) {
-            try {
-                session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
-            } catch (IOException ex) {
-                logger.error("Error on sending error O_o", ex);
-            }
-        }
     }
 
     /**
@@ -182,26 +140,175 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
-    private Response get(final ByteBuffer key) throws IOException {
-        final ByteBuffer value;
+    /**
+     * Receives a request to an entity and respond depending on the method.
+     *
+     * @param id      Entity iD
+     * @param request HTTP request
+     * @param session HTTP session
+     */
+    @Path("/v0/entity")
+    public void entity(
+            @Param("id") final String id,
+            @Param("replicas") final String replicas,
+            @NotNull final Request request,
+            @NotNull final HttpSession session) {
+        if (id == null || id.isEmpty()) {
+            try {
+                session.sendError(Response.BAD_REQUEST, "No id presented");
+            } catch (IOException e) {
+                logger.error("Error during response", e);
+            }
+            return;
+        }
+        final boolean proxied = request.getHeader(PROXY_HEADER) != null;
+        final ReplicationFactor rf;
+        rf = replicas == null ? this.rf : ReplicationFactor.from(replicas);
+        if (rf.getAck() < 1 || rf.getFrom() < rf.getAck() || rf.getFrom() > topology.size()) {
+            try {
+                session.sendError(Response.BAD_REQUEST, "Invalid replicas");
+                return;
+            } catch (IOException e) {
+                try {
+                    session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
+                } catch (IOException ex) {
+                    logger.error("Error on sending error O_o", ex);
+                    return;
+                }
+            }
+        }
         try {
-            value = dao.get(key).duplicate();
-            final byte[] responseBody = new byte[value.remaining()];
-            value.get(responseBody);
-            return new Response(Response.OK, responseBody);
-        } catch (NoSuchElementException e) {
-            return new Response(Response.NOT_FOUND, Response.EMPTY);
+            switch (request.getMethod()) {
+                case Request.METHOD_GET:
+                    executeAsync(session, () -> get(id, rf, proxied));
+                    break;
+                case Request.METHOD_PUT:
+                    executeAsync(session, () -> upsert(id, request.getBody(), rf, proxied));
+                    break;
+                case Request.METHOD_DELETE:
+                    executeAsync(session, () -> remove(id, rf, proxied));
+                    break;
+                default:
+                    session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
+                    break;
+            }
+        } catch (IOException e) {
+            try {
+                session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
+            } catch (IOException ex) {
+                logger.error("Error on sending error O_o", ex);
+            }
         }
     }
 
-    private Response upsert(final ByteBuffer key, final byte[] value) throws IOException {
-        dao.upsert(key, ByteBuffer.wrap(value));
-        return new Response(Response.CREATED, Response.EMPTY);
+    private Response get(final String id,
+                         final ReplicationFactor rf,
+                         final boolean proxy) throws IOException {
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
+        final Iterator<Item> itemIterator = dao.latestIterator(key);
+        if (proxy) {
+            return ServiceUtils.from(ValueUtils.from(key, itemIterator), true);
+        }
+
+        final String[] nodes = topology.replicas(rf.getFrom(), key);
+        final List<Value> responseValues = new ArrayList<>();
+        int asks = 0;
+
+        for (final String node :
+                nodes) {
+            if (topology.isMe(node)) {
+                responseValues.add(ValueUtils.from(key, itemIterator));
+                asks++;
+            } else {
+                try {
+                    final Response response = clientPool.get(node)
+                            .get("/v0/entity?id=" + id, PROXY_HEADER);
+                    asks++;
+                    responseValues.add(ValueUtils.from(response));
+                } catch (InterruptedException | PoolException | HttpException e) {
+                    logger.info("Can't get answer from {}, go next", node, e);
+                }
+            }
+        }
+        if (asks >= rf.getAck()) {
+            return ServiceUtils.from(ValueUtils.merge(responseValues), false);
+        } else {
+            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+        }
     }
 
-    private Response remove(final ByteBuffer key) throws IOException {
-        dao.remove(key);
-        return new Response(Response.ACCEPTED, Response.EMPTY);
+    private Response upsert(final String id,
+                            final byte[] valueArray,
+                            final ReplicationFactor rf,
+                            final boolean proxy) throws IOException {
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
+        final ByteBuffer value = ByteBuffer.wrap(valueArray);
+        if (proxy) {
+            dao.upsert(key, value);
+            return new Response(Response.CREATED, Response.EMPTY);
+        }
+
+        final String[] nodes = topology.replicas(rf.getFrom(), key);
+        int asks = 0;
+
+        for (final String node :
+                nodes) {
+            if (topology.isMe(node)) {
+                dao.upsert(key, value);
+                asks++;
+            } else {
+                try {
+                    final Response response = clientPool.get(node)
+                            .put("/v0/entity?id=" + id, valueArray, PROXY_HEADER);
+                    if (response.getStatus() == 201) {
+                        asks++;
+                    }
+                } catch (InterruptedException | PoolException | HttpException e) {
+                    logger.info("Can't get answer from {}, go next", node, e);
+                }
+            }
+        }
+        if (asks >= rf.getAck()) {
+            return new Response(Response.CREATED, Response.EMPTY);
+        } else {
+            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+        }
+    }
+
+    private Response remove(final String id,
+                            final ReplicationFactor rf,
+                            final boolean proxy) throws IOException {
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
+        if (proxy) {
+            dao.remove(key);
+            return new Response(Response.ACCEPTED, Response.EMPTY);
+        }
+
+        final String[] nodes = topology.replicas(rf.getFrom(), key);
+        int asks = 0;
+
+        for (final String node :
+                nodes) {
+            if (topology.isMe(node)) {
+                dao.remove(key);
+                asks++;
+            } else {
+                try {
+                    final Response response = clientPool.get(node)
+                            .delete("/v0/entity?id=" + id, PROXY_HEADER);
+                    if (response.getStatus() == 202) {
+                        asks++;
+                    }
+                } catch (InterruptedException | PoolException | HttpException e) {
+                    logger.info("Can't get answer from {}, go next", node, e);
+                }
+            }
+        }
+        if (asks >= rf.getAck()) {
+            return new Response(Response.ACCEPTED, Response.EMPTY);
+        } else {
+            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+        }
     }
 
     @Override
@@ -213,14 +320,6 @@ public class MyService extends HttpServer implements Service {
     @Override
     public HttpSession createSession(final Socket socket) throws RejectedSessionException {
         return new StreamSession(socket, this);
-    }
-
-    private Response proxy(final String node, final Request request) throws IOException{
-        try {
-            return pool.get(node).invoke(request);
-        } catch (InterruptedException | PoolException | HttpException e) {
-            throw new IOException("Proxying failed", e);
-        }
     }
 
     @Override

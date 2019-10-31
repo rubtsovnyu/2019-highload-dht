@@ -13,4 +13,8 @@ public interface Topology<T> {
 
     @NotNull
     Set<T> all();
+
+    int size();
+
+    T[] replicas(final int ack, @NotNull final ByteBuffer key);
 }

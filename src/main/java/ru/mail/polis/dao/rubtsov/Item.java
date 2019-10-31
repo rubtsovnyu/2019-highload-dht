@@ -71,7 +71,7 @@ public final class Item implements Comparable<Item> {
                 + valLen;
     }
 
-    private long getTimeStampAbs() {
+    public long getTimeStampAbs() {
         return Math.abs(timeStamp);
     }
 }
