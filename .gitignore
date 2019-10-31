@@ -16,6 +16,7 @@
 !.codeclimate.yml
 !profiling_sharding/*
 !profiling_async/*
+!profiling_replication/*
 
 # ...even if they are in subdirectories
 !*/
