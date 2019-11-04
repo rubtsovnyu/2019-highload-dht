@@ -57,6 +57,9 @@ checks:
   return-statements:
     config:
       threshold: 10 # Have pattern-matching-like code
+  file-lines:
+    config:
+      threshold: 370 # It's not enough
 exclude_patterns:
 - "**/*.svg"
 - "src/test/"

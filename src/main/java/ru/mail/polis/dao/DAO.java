@@ -19,6 +19,7 @@ package ru.mail.polis.dao;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.mail.polis.Record;
+import ru.mail.polis.dao.rubtsov.Item;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,6 +43,9 @@ public interface DAO extends Closeable {
      */
     @NotNull
     Iterator<Record> iterator(@NotNull ByteBuffer from) throws IOException;
+
+    @NotNull
+    Iterator<Item> latestIterator(@NotNull ByteBuffer from) throws IOException;
 
     /**
      * Provides iterator (possibly empty) over {@link Record}s starting at "from" key (inclusive)
