@@ -17,6 +17,7 @@
 !profiling_sharding/*
 !profiling_async/*
 !profiling_replication/*
+!profiling_future/*
 
 # ...even if they are in subdirectories
 !*/
