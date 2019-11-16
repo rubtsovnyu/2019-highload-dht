@@ -15,13 +15,13 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static ru.mail.polis.service.rubtsov.MyService.ENTITY_PATH;
 import static ru.mail.polis.service.rubtsov.MyService.PROXY_HEADER;
 import static ru.mail.polis.service.rubtsov.MyService.TIMEOUT;
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
 final class ServiceUtils {
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
+    private static final String ENTITY_PATH = "/v0/entity?id=";
 
     private ServiceUtils() {
     }

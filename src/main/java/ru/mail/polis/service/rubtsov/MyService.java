@@ -42,7 +42,6 @@ import static ru.mail.polis.service.rubtsov.ServiceUtils.handlePutResponses;
 public class MyService extends HttpServer implements Service {
     static final int TIMEOUT = 200;
     static final String PROXY_HEADER = "X-OK-Proxy";
-    static final String ENTITY_PATH = "/v0/entity?id=";
     static final String TIMESTAMP_HEADER = "X-OK-Timestamp";
     private static final int MIN_WORKERS = 8;
 
