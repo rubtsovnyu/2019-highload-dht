@@ -45,7 +45,7 @@ public class MyService extends HttpServer implements Service {
     private static final int TIMEOUT = 200;
     private static final String PROXY_HEADER = "X-OK-Proxy";
     private static final String ENTITY_PATH = "/v0/entity?id=";
-    private static final int MIN_WORKERS = 16;
+    private static final int MIN_WORKERS = 8;
     private static final String FUTURE_ERROR_MSG = "Future trouble";
 
     private final DAO dao;
