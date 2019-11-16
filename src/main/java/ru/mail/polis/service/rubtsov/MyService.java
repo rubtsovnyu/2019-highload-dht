@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static ru.mail.polis.service.rubtsov.ServiceUtils.getHttpRequests;
@@ -50,7 +49,7 @@ public class MyService extends HttpServer implements Service {
     private final Topology<String> topology;
     private final Executor myWorkers;
     private final ReplicationFactor rf;
-    private final HttpClient httpClient;
+    private final List<HttpClient> clientPool;
 
     /**
      * Create new service.
@@ -73,9 +72,16 @@ public class MyService extends HttpServer implements Service {
                 workersNumber,
                 new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
         logger.info("Service with port {} started", this.port);
-        httpClient = HttpClient.newBuilder()
-                .executor(myWorkers)
-                .build();
+        clientPool = new ArrayList<>(topology.size());
+        for (final String node :
+                topology.all()) {
+            if (topology.isMe(node)) {
+                continue;
+            }
+            clientPool.add(HttpClient.newBuilder()
+                    .executor(myWorkers)
+                    .build());
+        }
     }
 
     private static HttpServerConfig getConfig(final int port) {
@@ -234,9 +240,11 @@ public class MyService extends HttpServer implements Service {
 
     @NotNull
     private List<CompletableFuture<HttpResponse<byte[]>>> sendRequestsAndCollect(List<HttpRequest> requests) {
-        return requests.stream()
-                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
-                .collect(Collectors.toList());
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            futures.add(clientPool.get(i).sendAsync(requests.get(i), HttpResponse.BodyHandlers.ofByteArray()));
+        }
+        return futures;
     }
 
     private void upsert(final String id,
@@ -258,7 +266,6 @@ public class MyService extends HttpServer implements Service {
                 (b) -> b.PUT(HttpRequest.BodyPublishers.ofByteArray(valueArray)));
 
         final List<CompletableFuture<HttpResponse<byte[]>>> futures = sendRequestsAndCollect(requests);
-
 
         final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
 
