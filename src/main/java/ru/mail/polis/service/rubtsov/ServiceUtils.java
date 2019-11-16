@@ -7,21 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import static ru.mail.polis.service.rubtsov.MyService.PROXY_HEADER;
-import static ru.mail.polis.service.rubtsov.MyService.TIMEOUT;
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
 final class ServiceUtils {
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtils.class);
-    private static final String ENTITY_PATH = "/v0/entity?id=";
+    private static final String RESPONSE_ERROR_MSG = "Can't send a response";
 
     private ServiceUtils() {
     }
@@ -49,22 +42,6 @@ final class ServiceUtils {
         }
     }
 
-    @NotNull
-    static List<HttpRequest> getHttpRequests(Topology<String> topology,
-                                             final String id,
-                                             final Function<HttpRequest.Builder, HttpRequest.Builder> method) {
-        return topology.all().stream()
-                .filter(n -> !topology.isMe(n))
-                .map(s -> s + ENTITY_PATH + id)
-                .map(URI::create)
-                .map(HttpRequest::newBuilder)
-                .map(method)
-                .map(b -> b.header(PROXY_HEADER, Boolean.TRUE.toString())
-                        .timeout(Duration.ofMillis(TIMEOUT))
-                        .build())
-                .collect(Collectors.toList());
-    }
-
     static void handleGetResponses(final boolean haveOneAlready,
                                    final int ack,
                                    @NotNull final List<Value> values,
@@ -87,7 +64,7 @@ final class ServiceUtils {
                 session.sendResponse(new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY));
             }
         } catch (IOException e) {
-            logger.error("Can't send a response", e);
+            logger.error(RESPONSE_ERROR_MSG, e);
         }
     }
 
@@ -109,7 +86,7 @@ final class ServiceUtils {
                 session.sendResponse(new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY));
             }
         } catch (IOException e) {
-            logger.error("Can't send a response", e);
+            logger.error(RESPONSE_ERROR_MSG, e);
         }
     }
 
@@ -131,7 +108,7 @@ final class ServiceUtils {
                 session.sendResponse(new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY));
             }
         } catch (IOException e) {
-            logger.error("Can't send a response", e);
+            logger.error(RESPONSE_ERROR_MSG, e);
         }
     }
 }

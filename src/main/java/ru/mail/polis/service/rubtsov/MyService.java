@@ -21,20 +21,22 @@ import ru.mail.polis.dao.rubtsov.Item;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Charsets.UTF_8;
-import static ru.mail.polis.service.rubtsov.ServiceUtils.getHttpRequests;
 import static ru.mail.polis.service.rubtsov.ServiceUtils.handleDeleteResponses;
 import static ru.mail.polis.service.rubtsov.ServiceUtils.handleGetResponses;
 import static ru.mail.polis.service.rubtsov.ServiceUtils.handlePutResponses;
@@ -43,7 +45,9 @@ public class MyService extends HttpServer implements Service {
     static final int TIMEOUT = 200;
     static final String PROXY_HEADER = "X-OK-Proxy";
     static final String TIMESTAMP_HEADER = "X-OK-Timestamp";
+    private static final String ENTITY_PATH = "/v0/entity?id=";
     private static final int MIN_WORKERS = 16;
+    private final String FUTURE_ERROR_MSG = "Future trouble";
 
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
@@ -191,6 +195,22 @@ public class MyService extends HttpServer implements Service {
         }
     }
 
+    @NotNull
+    private static List<HttpRequest> getHttpRequests(final Topology<String> topology,
+                                                     final String id,
+                                                     final Function<HttpRequest.Builder, HttpRequest.Builder> method) {
+        return topology.all().stream()
+                .filter(n -> !topology.isMe(n))
+                .map(s -> s + ENTITY_PATH + id)
+                .map(URI::create)
+                .map(HttpRequest::newBuilder)
+                .map(method)
+                .map(b -> b.header(PROXY_HEADER, Boolean.TRUE.toString())
+                        .timeout(Duration.ofMillis(TIMEOUT))
+                        .build())
+                .collect(Collectors.toList());
+    }
+
     private void get(final String id,
                      final ReplicationFactor rf,
                      final boolean proxy,
@@ -227,13 +247,13 @@ public class MyService extends HttpServer implements Service {
                         responses,
                         session
                 )).exceptionally(e -> {
-            logger.error("Future trouble", e);
+            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
 
     @NotNull
-    private List<CompletableFuture<HttpResponse<byte[]>>> sendRequestsAndCollect(List<HttpRequest> requests) {
+    private List<CompletableFuture<HttpResponse<byte[]>>> sendRequestsAndCollect(final List<HttpRequest> requests) {
         return requests.stream()
                 .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
                 .collect(Collectors.toList());
@@ -280,7 +300,7 @@ public class MyService extends HttpServer implements Service {
                         responses,
                         session
                 )).exceptionally(e -> {
-            logger.error("Future trouble", e);
+            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
@@ -322,12 +342,12 @@ public class MyService extends HttpServer implements Service {
                         responses,
                         session
                 )).exceptionally(e -> {
-            logger.error("Future trouble", e);
+            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
 
-    private void sendInternalError(HttpSession session) {
+    private void sendInternalError(final HttpSession session) {
         try {
             session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
         } catch (IOException e) {

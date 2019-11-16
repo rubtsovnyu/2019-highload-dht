@@ -12,7 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-class FutureUtils {
+final class FutureUtils {
     private static final Logger logger = LoggerFactory.getLogger(FutureUtils.class);
 
     private FutureUtils() {
@@ -30,15 +30,11 @@ class FutureUtils {
         final CompletableFuture<List<HttpResponse<byte[]>>> results = new CompletableFuture<>();
 
         final BiConsumer<HttpResponse<byte[]>, Throwable> handler = (value, fail) -> {
-            if (value != null) {
-                if (!results.isDone()) {
-                    httpResponses.add(value);
-                    if (httpResponses.size() >= ack) {
-                        results.complete(httpResponses);
-                    }
-                }
-            } else if (fail != null) {
-                if (fails.incrementAndGet() > permissibleFails) {
+            if ((value == null || fail != null) && (fails.incrementAndGet() > permissibleFails)) {
+                results.complete(httpResponses);
+            } else if (!results.isDone()) {
+                httpResponses.add(value);
+                if (httpResponses.size() >= ack) {
                     results.complete(httpResponses);
                 }
             }
