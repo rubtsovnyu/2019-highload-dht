@@ -37,17 +37,16 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Charsets.UTF_8;
-import static ru.mail.polis.service.rubtsov.ServiceUtils.handleDeleteResponses;
 import static ru.mail.polis.service.rubtsov.ServiceUtils.handleGetResponses;
-import static ru.mail.polis.service.rubtsov.ServiceUtils.handlePutResponses;
+import static ru.mail.polis.service.rubtsov.ServiceUtils.handlePutOrDeleteResponses;
 
 public class MyService extends HttpServer implements Service {
-    static final int TIMEOUT = 200;
-    static final String PROXY_HEADER = "X-OK-Proxy";
     static final String TIMESTAMP_HEADER = "X-OK-Timestamp";
+    private static final int TIMEOUT = 200;
+    private static final String PROXY_HEADER = "X-OK-Proxy";
     private static final String ENTITY_PATH = "/v0/entity?id=";
     private static final int MIN_WORKERS = 16;
-    private final String FUTURE_ERROR_MSG = "Future trouble";
+    private static final String FUTURE_ERROR_MSG = "Future trouble";
 
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
@@ -294,11 +293,12 @@ public class MyService extends HttpServer implements Service {
             return true;
         }, myWorkers)
                 .thenComposeAsync(skip -> FutureUtils.getFutureResponses(futures, ackNeeded))
-                .whenCompleteAsync((responses, fail) -> handlePutResponses(
+                .whenCompleteAsync((responses, fail) -> handlePutOrDeleteResponses(
                         nodes.contains(topology.me()),
                         rf.getAck(),
                         responses,
-                        session
+                        session,
+                        201
                 )).exceptionally(e -> {
             logger.error(FUTURE_ERROR_MSG, e);
             return null;
@@ -336,11 +336,12 @@ public class MyService extends HttpServer implements Service {
             return true;
         }, myWorkers)
                 .thenComposeAsync(skip -> FutureUtils.getFutureResponses(futures, ackNeeded))
-                .whenCompleteAsync((responses, fail) -> handleDeleteResponses(
+                .whenCompleteAsync((responses, fail) -> handlePutOrDeleteResponses(
                         nodes.contains(topology.me()),
                         rf.getAck(),
                         responses,
-                        session
+                        session,
+                        202
                 )).exceptionally(e -> {
             logger.error(FUTURE_ERROR_MSG, e);
             return null;

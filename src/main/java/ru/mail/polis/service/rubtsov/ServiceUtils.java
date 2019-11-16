@@ -68,20 +68,25 @@ final class ServiceUtils {
         }
     }
 
-    static void handlePutResponses(final boolean haveOneAlready,
-                                   final int ack,
-                                   @NotNull final List<HttpResponse<byte[]>> httpResponses,
-                                   @NotNull final HttpSession session) {
+    static void handlePutOrDeleteResponses(final boolean haveOneAlready,
+                                           final int ack,
+                                           @NotNull final List<HttpResponse<byte[]>> httpResponses,
+                                           @NotNull final HttpSession session,
+                                           final int neededStatusCode) {
         int resAck = haveOneAlready ? 1 : 0;
         for (final HttpResponse<byte[]> r :
                 httpResponses) {
-            if (r.statusCode() == 201) {
+            if (r.statusCode() == neededStatusCode) {
                 resAck++;
             }
         }
         try {
             if (resAck >= ack) {
-                session.sendResponse(new Response(Response.CREATED, Response.EMPTY));
+                if (neededStatusCode == 201) {
+                    session.sendResponse(new Response(Response.CREATED, Response.EMPTY));
+                } else if (neededStatusCode == 202) {
+                    session.sendResponse(new Response(Response.ACCEPTED, Response.EMPTY));
+                }
             } else {
                 session.sendResponse(new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY));
             }

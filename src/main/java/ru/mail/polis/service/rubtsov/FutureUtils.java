@@ -30,9 +30,9 @@ final class FutureUtils {
         final CompletableFuture<List<HttpResponse<byte[]>>> results = new CompletableFuture<>();
 
         final BiConsumer<HttpResponse<byte[]>, Throwable> handler = (value, fail) -> {
-            if ((value == null || fail != null) && (fails.incrementAndGet() > permissibleFails)) {
+            if ((value == null || fail != null) && fails.incrementAndGet() > permissibleFails) {
                 results.complete(httpResponses);
-            } else if (!results.isDone()) {
+            } else if (!results.isDone() && value != null) {
                 httpResponses.add(value);
                 if (httpResponses.size() >= ack) {
                     results.complete(httpResponses);
