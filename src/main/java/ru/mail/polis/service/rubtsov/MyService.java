@@ -46,7 +46,7 @@ public class MyService extends HttpServer implements Service {
     private static final String PROXY_HEADER = "X-OK-Proxy";
     private static final String ENTITY_PATH = "/v0/entity?id=";
     private static final int MIN_WORKERS = 16;
-    private static final String FUTURE_ERROR_MSG = "Future trouble";
+//    private static final String FUTURE_ERROR_MSG = "Future trouble";
 
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
@@ -246,7 +246,7 @@ public class MyService extends HttpServer implements Service {
                         responses,
                         session
                 )).exceptionally(e -> {
-            logger.error(FUTURE_ERROR_MSG, e);
+//            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
@@ -300,7 +300,7 @@ public class MyService extends HttpServer implements Service {
                         session,
                         201
                 )).exceptionally(e -> {
-            logger.error(FUTURE_ERROR_MSG, e);
+//            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
@@ -343,7 +343,7 @@ public class MyService extends HttpServer implements Service {
                         session,
                         202
                 )).exceptionally(e -> {
-            logger.error(FUTURE_ERROR_MSG, e);
+//            logger.error(FUTURE_ERROR_MSG, e);
             return null;
         });
     }
