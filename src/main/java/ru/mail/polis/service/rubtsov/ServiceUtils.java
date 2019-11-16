@@ -94,26 +94,4 @@ final class ServiceUtils {
             logger.error(RESPONSE_ERROR_MSG, e);
         }
     }
-
-    static void handleDeleteResponses(final boolean haveOneAlready,
-                                      final int ack,
-                                      @NotNull final List<HttpResponse<byte[]>> httpResponses,
-                                      @NotNull final HttpSession session) {
-        int resAck = haveOneAlready ? 1 : 0;
-        for (final HttpResponse<byte[]> r :
-                httpResponses) {
-            if (r.statusCode() == 202) {
-                resAck++;
-            }
-        }
-        try {
-            if (resAck >= ack) {
-                session.sendResponse(new Response(Response.ACCEPTED, Response.EMPTY));
-            } else {
-                session.sendResponse(new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY));
-            }
-        } catch (IOException e) {
-            logger.error(RESPONSE_ERROR_MSG, e);
-        }
-    }
 }
