@@ -232,29 +232,6 @@ public class MyService extends HttpServer implements Service {
             logger.error("Future trouble", e);
             return null;
         });
-
-
-//        for (final String node :
-//                nodes) {
-//            if (topology.isMe(node)) {
-//                responseValues.add(ValueUtils.from(key, itemIterator));
-//                asks++;
-//            } else {
-//                try {
-//                    final Response response = clientPool.get(node)
-//                            .get(ENTITY_PATH + id, PROXY_HEADER);
-//                    asks++;
-//                    responseValues.add(ValueUtils.from(response));
-//                } catch (InterruptedException | PoolException | HttpException e) {
-//                    logger.info("Can't get answer from {} for get an item", node, e);
-//                }
-//            }
-//        }
-//        if (asks >= rf.getAck()) {
-//            return ServiceUtils.from(ValueUtils.merge(responseValues), false);
-//        } else {
-//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-//        }
     }
 
     private void upsert(final String id,
@@ -307,31 +284,6 @@ public class MyService extends HttpServer implements Service {
             logger.error("Future trouble", e);
             return null;
         });
-
-//        int asks = 0;
-//
-//        for (final String node :
-//                nodes) {
-//            if (topology.isMe(node)) {
-//                dao.upsert(key, value);
-//                asks++;
-//            } else {
-//                try {
-//                    final Response response = clientPool.get(node)
-//                            .put(ENTITY_PATH + id, valueArray, PROXY_HEADER);
-//                    if (response.getStatus() == 201) {
-//                        asks++;
-//                    }
-//                } catch (InterruptedException | PoolException | HttpException e) {
-//                    logger.info("Can't get answer from {} for upsert an item", node, e);
-//                }
-//            }
-//        }
-//        if (asks >= rf.getAck()) {
-//            return new Response(Response.CREATED, Response.EMPTY);
-//        } else {
-//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-//        }
     }
 
     private void remove(final String id,
@@ -380,32 +332,6 @@ public class MyService extends HttpServer implements Service {
             logger.error("Future trouble", e);
             return null;
         });
-
-//        final String[] nodes = topology.replicas(rf.getFrom(), key);
-//        int asks = 0;
-//
-//        for (final String node :
-//                nodes) {
-//            if (topology.isMe(node)) {
-//                dao.remove(key);
-//                asks++;
-//            } else {
-//                try {
-//                    final Response response = clientPool.get(node)
-//                            .delete(ENTITY_PATH + id, PROXY_HEADER);
-//                    if (response.getStatus() == 202) {
-//                        asks++;
-//                    }
-//                } catch (InterruptedException | PoolException | HttpException e) {
-//                    logger.info("Can't get answer from {} for remove an item", node, e);
-//                }
-//            }
-//        }
-//        if (asks >= rf.getAck()) {
-//            return new Response(Response.ACCEPTED, Response.EMPTY);
-//        } else {
-//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-//        }
     }
 
     private void sendInternalError(HttpSession session) {
