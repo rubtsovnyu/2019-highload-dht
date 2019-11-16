@@ -1,14 +1,15 @@
 package ru.mail.polis.service.rubtsov;
 
-import one.nio.http.Response;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.rubtsov.Item;
 
 import java.io.IOException;
+import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Optional;
 
 import static ru.mail.polis.service.rubtsov.MyService.TIMESTAMP_HEADER;
 
@@ -23,14 +24,15 @@ final class ValueUtils {
                 .orElseGet(Value::absent);
     }
 
-    static Value from(@NotNull final Response response) throws IOException {
-        final String timestamp = response.getHeader(TIMESTAMP_HEADER);
-        if (response.getStatus() == 200) {
+    static Value from(@NotNull final HttpResponse<byte[]> response) throws IOException {
+        final Optional<String> timestampOptional = response.headers().firstValue(TIMESTAMP_HEADER);
+        final String timestamp = timestampOptional.orElse(null);
+        if (response.statusCode() == 200) {
             if (timestamp == null) {
-                throw new IllegalArgumentException("Something wrong with timestamp: " + response.getStatus());
+                throw new IllegalArgumentException("Something wrong with timestamp: " + response.statusCode());
             }
-            return Value.present(ByteBuffer.wrap(response.getBody()), Long.parseLong(timestamp));
-        } else if (response.getStatus() == 404) {
+            return Value.present(ByteBuffer.wrap(response.body()), Long.parseLong(timestamp));
+        } else if (response.statusCode() == 404) {
             if (timestamp == null) {
                 return Value.absent();
             } else {

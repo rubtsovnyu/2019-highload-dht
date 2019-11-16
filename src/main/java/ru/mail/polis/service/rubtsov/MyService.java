@@ -1,8 +1,6 @@
 package ru.mail.polis.service.rubtsov;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import one.nio.http.HttpClient;
-import one.nio.http.HttpException;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
@@ -11,9 +9,7 @@ import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.RequestMethod;
 import one.nio.http.Response;
-import one.nio.net.ConnectionString;
 import one.nio.net.Socket;
-import one.nio.pool.PoolException;
 import one.nio.server.AcceptorConfig;
 import one.nio.server.RejectedSessionException;
 import org.jetbrains.annotations.NotNull;
@@ -25,27 +21,33 @@ import ru.mail.polis.dao.rubtsov.Item;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Charsets.UTF_8;
+import static ru.mail.polis.service.rubtsov.ServiceUtils.getHttpRequests;
+import static ru.mail.polis.service.rubtsov.ServiceUtils.handleDeleteResponses;
+import static ru.mail.polis.service.rubtsov.ServiceUtils.handleGetResponses;
+import static ru.mail.polis.service.rubtsov.ServiceUtils.handlePutResponses;
 
 public class MyService extends HttpServer implements Service {
-    private static final int MIN_WORKERS = 4;
-    private static final String PROXY_HEADER = "X-OK-Proxy: true";
-    private static final String ENTITY_PATH = "/v0/entity?id=";
-    static final String TIMESTAMP_HEADER = "X-OK-Timestamp: ";
+    static final int TIMEOUT = 200;
+    static final String PROXY_HEADER = "X-OK-Proxy";
+    static final String ENTITY_PATH = "/v0/entity?id=";
+    static final String TIMESTAMP_HEADER = "X-OK-Timestamp";
+    private static final int MIN_WORKERS = 8;
 
     private final DAO dao;
     private final Logger logger = LoggerFactory.getLogger(MyService.class);
     private final Topology<String> topology;
-    private final Map<String, HttpClient> clientPool;
     private final Executor myWorkers;
     private final ReplicationFactor rf;
 
@@ -69,14 +71,6 @@ public class MyService extends HttpServer implements Service {
         myWorkers = Executors.newFixedThreadPool(
                 workersNumber,
                 new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
-        this.clientPool = new HashMap<>();
-        for (final String node :
-                topology.all()) {
-            if (topology.isMe(node)) {
-                continue;
-            }
-            clientPool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
-        }
         logger.info("Service with port {} started", this.port);
     }
 
@@ -122,11 +116,7 @@ public class MyService extends HttpServer implements Service {
                 session.sendError(Response.BAD_REQUEST, "End should not be empty");
             }
         } catch (IOException e) {
-            try {
-                session.sendError(Response.INTERNAL_ERROR, null);
-            } catch (IOException ex) {
-                logger.error("Something went wrong during request processing", ex);
-            }
+            sendInternalError(session);
         }
         try {
             final Iterator<Record> recordIterator = dao.range(
@@ -180,134 +170,249 @@ public class MyService extends HttpServer implements Service {
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    executeAsync(session, () -> get(id, repFactor, isProxied));
+                    executeAsync(() -> get(id, repFactor, isProxied, session));
                     break;
                 case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(id, request.getBody(), repFactor, isProxied));
+                    executeAsync(() -> upsert(id, request.getBody(), repFactor, isProxied, session));
                     break;
                 case Request.METHOD_DELETE:
-                    executeAsync(session, () -> remove(id, repFactor, isProxied));
+                    executeAsync(() -> remove(id, repFactor, isProxied, session));
                     break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "Invalid method");
                     break;
             }
         } catch (IOException e) {
-            try {
-                session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
-            } catch (IOException ex) {
-                logger.error("Error on sending error O_o", ex);
-            }
+            sendInternalError(session);
         }
     }
 
-    private Response get(final String id,
-                         final ReplicationFactor rf,
-                         final boolean proxy) throws IOException {
+    private void get(final String id,
+                     final ReplicationFactor rf,
+                     final boolean proxy,
+                     final HttpSession session) throws IOException {
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
         final Iterator<Item> itemIterator = dao.latestIterator(key);
         if (proxy) {
-            return ServiceUtils.from(ValueUtils.from(key, itemIterator), true);
+            session.sendResponse(ServiceUtils.from(ValueUtils.from(key, itemIterator), true));
+            return;
         }
 
-        final String[] nodes = topology.replicas(rf.getFrom(), key);
-        final List<Value> responseValues = new ArrayList<>();
-        int asks = 0;
+        final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        for (final String node :
-                nodes) {
-            if (topology.isMe(node)) {
-                responseValues.add(ValueUtils.from(key, itemIterator));
-                asks++;
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+                .executor(myWorkers)
+                .build();
+
+        final List<HttpRequest> requests = getHttpRequests(topology, id, HttpRequest.Builder::GET);
+
+        final List<Value> values = new ArrayList<>();
+
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
+                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
+                .collect(Collectors.toList());
+
+        final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
+
+        CompletableFuture.supplyAsync(() -> {
+            if (nodes.contains(topology.me())) {
+                return values.add(ValueUtils.from(key, itemIterator));
             } else {
-                try {
-                    final Response response = clientPool.get(node)
-                            .get(ENTITY_PATH + id, PROXY_HEADER);
-                    asks++;
-                    responseValues.add(ValueUtils.from(response));
-                } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {} for get an item", node, e);
-                }
+                return false;
             }
-        }
-        if (asks >= rf.getAck()) {
-            return ServiceUtils.from(ValueUtils.merge(responseValues), false);
-        } else {
-            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-        }
+        }, myWorkers)
+                .thenComposeAsync(skip -> FutureUtils.getFutureResponses(futures, ackNeeded))
+                .whenCompleteAsync((responses, fail) -> handleGetResponses(
+                        nodes.contains(topology.me()),
+                        rf.getAck(),
+                        values,
+                        responses,
+                        session
+                )).exceptionally(e -> {
+            logger.error("Future trouble", e);
+            return null;
+        });
+
+
+//        for (final String node :
+//                nodes) {
+//            if (topology.isMe(node)) {
+//                responseValues.add(ValueUtils.from(key, itemIterator));
+//                asks++;
+//            } else {
+//                try {
+//                    final Response response = clientPool.get(node)
+//                            .get(ENTITY_PATH + id, PROXY_HEADER);
+//                    asks++;
+//                    responseValues.add(ValueUtils.from(response));
+//                } catch (InterruptedException | PoolException | HttpException e) {
+//                    logger.info("Can't get answer from {} for get an item", node, e);
+//                }
+//            }
+//        }
+//        if (asks >= rf.getAck()) {
+//            return ServiceUtils.from(ValueUtils.merge(responseValues), false);
+//        } else {
+//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+//        }
     }
 
-    private Response upsert(final String id,
-                            final byte[] valueArray,
-                            final ReplicationFactor rf,
-                            final boolean proxy) throws IOException {
+    private void upsert(final String id,
+                        final byte[] valueArray,
+                        final ReplicationFactor rf,
+                        final boolean proxy,
+                        final HttpSession session) throws IOException {
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
         final ByteBuffer value = ByteBuffer.wrap(valueArray);
         if (proxy) {
             dao.upsert(key, value);
-            return new Response(Response.CREATED, Response.EMPTY);
+            session.sendResponse(new Response(Response.CREATED, Response.EMPTY));
+            return;
         }
 
-        final String[] nodes = topology.replicas(rf.getFrom(), key);
-        int asks = 0;
+        final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        for (final String node :
-                nodes) {
-            if (topology.isMe(node)) {
-                dao.upsert(key, value);
-                asks++;
-            } else {
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+                .executor(myWorkers)
+                .build();
+
+        final List<HttpRequest> requests = getHttpRequests(topology, id,
+                (b) -> b.PUT(HttpRequest.BodyPublishers.ofByteArray(valueArray)));
+
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
+                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
+                .collect(Collectors.toList());
+
+
+        final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
+
+        CompletableFuture.supplyAsync(() -> {
+            if (nodes.contains(topology.me())) {
                 try {
-                    final Response response = clientPool.get(node)
-                            .put(ENTITY_PATH + id, valueArray, PROXY_HEADER);
-                    if (response.getStatus() == 201) {
-                        asks++;
-                    }
-                } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {} for upsert an item", node, e);
+                    dao.upsert(key, value);
+                } catch (IOException e) {
+                    sendInternalError(session);
+                    logger.error("Can't upsert to DAO {} : {}", key, value, e);
                 }
             }
-        }
-        if (asks >= rf.getAck()) {
-            return new Response(Response.CREATED, Response.EMPTY);
-        } else {
-            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-        }
+            return true;
+        }, myWorkers)
+                .thenComposeAsync(skip -> FutureUtils.getFutureResponses(futures, ackNeeded))
+                .whenCompleteAsync((responses, fail) -> handlePutResponses(
+                        nodes.contains(topology.me()),
+                        rf.getAck(),
+                        responses,
+                        session
+                )).exceptionally(e -> {
+            logger.error("Future trouble", e);
+            return null;
+        });
+
+//        int asks = 0;
+//
+//        for (final String node :
+//                nodes) {
+//            if (topology.isMe(node)) {
+//                dao.upsert(key, value);
+//                asks++;
+//            } else {
+//                try {
+//                    final Response response = clientPool.get(node)
+//                            .put(ENTITY_PATH + id, valueArray, PROXY_HEADER);
+//                    if (response.getStatus() == 201) {
+//                        asks++;
+//                    }
+//                } catch (InterruptedException | PoolException | HttpException e) {
+//                    logger.info("Can't get answer from {} for upsert an item", node, e);
+//                }
+//            }
+//        }
+//        if (asks >= rf.getAck()) {
+//            return new Response(Response.CREATED, Response.EMPTY);
+//        } else {
+//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+//        }
     }
 
-    private Response remove(final String id,
-                            final ReplicationFactor rf,
-                            final boolean proxy) throws IOException {
+    private void remove(final String id,
+                        final ReplicationFactor rf,
+                        final boolean proxy,
+                        final HttpSession session) throws IOException {
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(UTF_8));
         if (proxy) {
             dao.remove(key);
-            return new Response(Response.ACCEPTED, Response.EMPTY);
+            session.sendResponse(new Response(Response.ACCEPTED, Response.EMPTY));
+            return;
         }
 
-        final String[] nodes = topology.replicas(rf.getFrom(), key);
-        int asks = 0;
+        final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        for (final String node :
-                nodes) {
-            if (topology.isMe(node)) {
-                dao.remove(key);
-                asks++;
-            } else {
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+                .executor(myWorkers)
+                .build();
+
+        final List<HttpRequest> requests = getHttpRequests(topology, id, HttpRequest.Builder::DELETE);
+
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
+                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
+                .collect(Collectors.toList());
+
+        final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
+
+        CompletableFuture.supplyAsync(() -> {
+            if (nodes.contains(topology.me())) {
                 try {
-                    final Response response = clientPool.get(node)
-                            .delete(ENTITY_PATH + id, PROXY_HEADER);
-                    if (response.getStatus() == 202) {
-                        asks++;
-                    }
-                } catch (InterruptedException | PoolException | HttpException e) {
-                    logger.info("Can't get answer from {} for remove an item", node, e);
+                    dao.remove(key);
+                } catch (IOException e) {
+                    sendInternalError(session);
+                    logger.error("Can't remove from DAO {}", key, e);
                 }
             }
-        }
-        if (asks >= rf.getAck()) {
-            return new Response(Response.ACCEPTED, Response.EMPTY);
-        } else {
-            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+            return true;
+        }, myWorkers)
+                .thenComposeAsync(skip -> FutureUtils.getFutureResponses(futures, ackNeeded))
+                .whenCompleteAsync((responses, fail) -> handleDeleteResponses(
+                        nodes.contains(topology.me()),
+                        rf.getAck(),
+                        responses,
+                        session
+                )).exceptionally(e -> {
+            logger.error("Future trouble", e);
+            return null;
+        });
+
+//        final String[] nodes = topology.replicas(rf.getFrom(), key);
+//        int asks = 0;
+//
+//        for (final String node :
+//                nodes) {
+//            if (topology.isMe(node)) {
+//                dao.remove(key);
+//                asks++;
+//            } else {
+//                try {
+//                    final Response response = clientPool.get(node)
+//                            .delete(ENTITY_PATH + id, PROXY_HEADER);
+//                    if (response.getStatus() == 202) {
+//                        asks++;
+//                    }
+//                } catch (InterruptedException | PoolException | HttpException e) {
+//                    logger.info("Can't get answer from {} for remove an item", node, e);
+//                }
+//            }
+//        }
+//        if (asks >= rf.getAck()) {
+//            return new Response(Response.ACCEPTED, Response.EMPTY);
+//        } else {
+//            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
+//        }
+    }
+
+    private void sendInternalError(HttpSession session) {
+        try {
+            session.sendError(Response.INTERNAL_ERROR, "Something went wrong...");
+        } catch (IOException e) {
+            logger.error("Can't send error", e);
         }
     }
 
@@ -334,23 +439,19 @@ public class MyService extends HttpServer implements Service {
         logger.info("Service with port {} stopped", port);
     }
 
-    private void executeAsync(final HttpSession httpSession, final Action action) {
+    private void executeAsync(final Action action) {
         myWorkers.execute(() -> {
             try {
-                httpSession.sendResponse(action.act());
+                action.act();
             } catch (IOException e) {
-                try {
-                    httpSession.sendError(Response.INTERNAL_ERROR, e.getMessage());
-                } catch (IOException ex) {
-                    logger.error("Error during request processing", ex);
-                }
+                logger.error("Error during request processing", e);
             }
         });
     }
 
     @FunctionalInterface
     interface Action {
-        Response act() throws IOException;
+        void act() throws IOException;
     }
 
 }

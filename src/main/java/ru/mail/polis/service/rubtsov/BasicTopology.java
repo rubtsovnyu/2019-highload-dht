@@ -4,7 +4,9 @@ import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 public class BasicTopology implements Topology<String> {
@@ -50,15 +52,22 @@ public class BasicTopology implements Topology<String> {
         return nodes.length;
     }
 
+    @NotNull
     @Override
-    public String[] replicas(final int ack, @NotNull final ByteBuffer key) {
-        final String[] ackNodes = new String[ack];
+    public List<String> replicas(final int ack, @NotNull final ByteBuffer key) {
+        final List<String> ackNodes = new ArrayList<>(ack);
         final int keyHashCode = key.hashCode();
-        int nodeIndex = (keyHashCode & Integer.MAX_VALUE) % ackNodes.length;
+        int nodeIndex = (keyHashCode & Integer.MAX_VALUE) % ack;
         for (int i = 0; i < ack; i++) {
-            ackNodes[i] = this.nodes[nodeIndex];
+            ackNodes.add(i, this.nodes[nodeIndex]);
             nodeIndex = (nodeIndex + 1) % nodes.length;
         }
         return ackNodes;
+    }
+
+    @NotNull
+    @Override
+    public String me() {
+        return me;
     }
 }
