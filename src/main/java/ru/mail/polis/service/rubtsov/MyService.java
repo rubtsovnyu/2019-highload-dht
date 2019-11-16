@@ -21,6 +21,7 @@ import ru.mail.polis.dao.rubtsov.Item;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
@@ -50,6 +51,7 @@ public class MyService extends HttpServer implements Service {
     private final Topology<String> topology;
     private final Executor myWorkers;
     private final ReplicationFactor rf;
+    private final HttpClient httpClient;
 
     /**
      * Create new service.
@@ -72,6 +74,9 @@ public class MyService extends HttpServer implements Service {
                 workersNumber,
                 new ThreadFactoryBuilder().setNameFormat("worker-%d").build());
         logger.info("Service with port {} started", this.port);
+        httpClient = HttpClient.newBuilder()
+                .executor(myWorkers)
+                .build();
     }
 
     private static HttpServerConfig getConfig(final int port) {
@@ -200,17 +205,11 @@ public class MyService extends HttpServer implements Service {
 
         final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-                .executor(myWorkers)
-                .build();
-
         final List<HttpRequest> requests = getHttpRequests(topology, id, HttpRequest.Builder::GET);
 
         final List<Value> values = new ArrayList<>();
 
-        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
-                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
-                .collect(Collectors.toList());
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = sendRequestsAndCollect(requests);
 
         final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
 
@@ -234,6 +233,13 @@ public class MyService extends HttpServer implements Service {
         });
     }
 
+    @NotNull
+    private List<CompletableFuture<HttpResponse<byte[]>>> sendRequestsAndCollect(List<HttpRequest> requests) {
+        return requests.stream()
+                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
+                .collect(Collectors.toList());
+    }
+
     private void upsert(final String id,
                         final byte[] valueArray,
                         final ReplicationFactor rf,
@@ -249,16 +255,10 @@ public class MyService extends HttpServer implements Service {
 
         final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-                .executor(myWorkers)
-                .build();
-
         final List<HttpRequest> requests = getHttpRequests(topology, id,
                 (b) -> b.PUT(HttpRequest.BodyPublishers.ofByteArray(valueArray)));
 
-        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
-                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
-                .collect(Collectors.toList());
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = sendRequestsAndCollect(requests);
 
 
         final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
@@ -299,15 +299,9 @@ public class MyService extends HttpServer implements Service {
 
         final List<String> nodes = topology.replicas(rf.getFrom(), key);
 
-        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-                .executor(myWorkers)
-                .build();
-
         final List<HttpRequest> requests = getHttpRequests(topology, id, HttpRequest.Builder::DELETE);
 
-        final List<CompletableFuture<HttpResponse<byte[]>>> futures = requests.stream()
-                .map(request -> httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()))
-                .collect(Collectors.toList());
+        final List<CompletableFuture<HttpResponse<byte[]>>> futures = sendRequestsAndCollect(requests);
 
         final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
 

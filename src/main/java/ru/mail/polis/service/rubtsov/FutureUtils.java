@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
@@ -47,7 +46,7 @@ class FutureUtils {
 
         for (final CompletableFuture<HttpResponse<byte[]>> f :
                 futureList) {
-            f.orTimeout(1, TimeUnit.SECONDS).whenCompleteAsync(handler)
+            f.whenCompleteAsync(handler)
                     .exceptionally(e -> {
                         logger.error("Future trouble: {}", e.getCause().getMessage());
                         return null;
