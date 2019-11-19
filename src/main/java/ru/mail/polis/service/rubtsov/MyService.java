@@ -278,7 +278,6 @@ public class MyService extends HttpServer implements Service {
 
         final List<CompletableFuture<HttpResponse<byte[]>>> futures = sendRequestsAndCollect(requests);
 
-
         final int ackNeeded = nodes.contains(topology.me()) ? rf.getAck() - 1 : rf.getAck();
 
         CompletableFuture.supplyAsync(() -> {
