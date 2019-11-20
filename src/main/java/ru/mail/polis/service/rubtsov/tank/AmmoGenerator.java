@@ -12,7 +12,7 @@ public class AmmoGenerator {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 2 || args.length > 3) {
-            System.err.println("Usage: [mode] [requests count] [last key]");
+            System.err.println("Usage: [mode] [requests count] (optional)[last key]");
             System.exit(42);
         }
 

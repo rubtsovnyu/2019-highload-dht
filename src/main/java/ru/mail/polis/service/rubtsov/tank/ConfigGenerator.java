@@ -24,6 +24,7 @@ public class ConfigGenerator {
         final String mode = args[0];
         final String address = args[1];
         final String type = args[2];
+
         try {
             final int typeInt = Integer.parseInt(type);
             if (typeInt < 0 || typeInt > 1) {
@@ -32,6 +33,7 @@ public class ConfigGenerator {
         } catch (NumberFormatException e) {
             System.err.println("Wrong type!");
         }
+
         final String maxRps = args[3];
 
         ByteArrayOutputStream config = new ByteArrayOutputStream();
@@ -50,7 +52,7 @@ public class ConfigGenerator {
             config.write(", 5m)".getBytes(UTF_8));
         }
         config.write(("\ntelegraf:\n  enabled: false\noverload:\n  enabled: true\n  " +
-                "token_file: /var/loadtest/token\n").getBytes(UTF_8));
+                "token_file: /var/loadtest/token\n  job_dsc: mode: " + mode + ", type: " + type).getBytes(UTF_8));
 
         final String dir = System.getProperty("user.dir");
         final Path filePath = Path.of(dir + "/mode_" + mode + "_type_" + type + ".yaml");
