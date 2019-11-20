@@ -45,14 +45,16 @@ public class ConfigGenerator {
         config.write(".ammo\n  load_profile:\n    load_type: rps\n    schedule: ".getBytes(UTF_8));
         config.write("line(1, ".getBytes(UTF_8));
         config.write(maxRps.getBytes(UTF_8));
-        config.write(", 5m)".getBytes(UTF_8));
         if (Integer.parseInt(type) == 1) {
+            config.write(", 2m)".getBytes(UTF_8));
             config.write(" const(".getBytes(UTF_8));
             config.write(maxRps.getBytes(UTF_8));
+            config.write(", 3m)".getBytes(UTF_8));
+        } else {
             config.write(", 5m)".getBytes(UTF_8));
         }
         config.write(("\ntelegraf:\n  enabled: false\noverload:\n  enabled: true\n  " +
-                "token_file: /var/loadtest/token\n  job_dsc: mode: " + mode + ", type: " + type).getBytes(UTF_8));
+                "token_file: /var/loadtest/token\n  job_dsc: \"mode: " + mode + ", type: " + type + "\"\n").getBytes(UTF_8));
 
         final String dir = System.getProperty("user.dir");
         final Path filePath = Path.of(dir + "/mode_" + mode + "_type_" + type + ".yaml");
