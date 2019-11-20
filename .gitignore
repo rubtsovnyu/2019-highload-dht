@@ -5,6 +5,7 @@
 !.gitignore
 !*.java
 !README.md
+!PROFILING.md
 !LICENSE
 !gradlew.bat
 !gradlew
@@ -13,6 +14,10 @@
 !settings.gradle
 !checkstyle.xml
 !.codeclimate.yml
+!profiling_sharding/*
+!profiling_async/*
+!profiling_replication/*
+!profiling_future/*
 
 # ...even if they are in subdirectories
 !*/
