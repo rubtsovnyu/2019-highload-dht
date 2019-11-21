@@ -78,6 +78,7 @@ public class MyService extends HttpServer implements Service {
         logger.info("Service with port {} started", this.port);
         httpClient = HttpClient.newBuilder()
                 .executor(myWorkers)
+                .version(HttpClient.Version.HTTP_2)
                 .build();
     }
 
