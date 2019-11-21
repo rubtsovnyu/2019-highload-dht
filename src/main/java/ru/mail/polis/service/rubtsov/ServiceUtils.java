@@ -26,7 +26,7 @@ final class ServiceUtils {
                 response = new Response(Response.NOT_FOUND, Response.EMPTY);
                 return response;
             case PRESENT:
-                response = new Response(Response.OK, value.getData().array());
+                response = new Response(Response.OK, value.getDataBytes());
                 if (proxy) {
                     response.addHeader(TIMESTAMP_HEADER + ": " + value.getTimestamp());
                 }

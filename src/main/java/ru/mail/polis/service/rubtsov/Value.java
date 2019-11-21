@@ -42,6 +42,12 @@ public final class Value implements Comparable<Value> {
         return data;
     }
 
+    byte[] getDataBytes() {
+        byte[] dataBytes = new byte[this.data.remaining()];
+        this.data.duplicate().get(dataBytes);
+        return dataBytes;
+    }
+
     long getTimestamp() {
         return timestamp;
     }
