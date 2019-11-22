@@ -82,7 +82,13 @@ public class AmmoGenerator {
     }
 
     private static void mixedPutNewGetExisting(final long count, final long lastKey) throws IOException {
-        long newPutKey = lastKey + 1;
+        long newPutKey;
+        if (lastKey == 0) {
+            put(lastKey);
+            newPutKey = 1;
+        } else {
+            newPutKey = lastKey;
+        }
         for (long i = lastKey; i < count + lastKey; i++) {
             final boolean putOrGet = ThreadLocalRandom.current().nextBoolean();
             if (putOrGet) {
