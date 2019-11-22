@@ -8,7 +8,24 @@ import java.nio.file.Path;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Generates config for Yandex.Tank
+ */
 public class ConfigGenerator {
+    private ConfigGenerator() {
+        // Not instantiable
+    }
+
+    /**
+     * Generates config for Yandex.Tank. The resulting config depends on the parameters.
+     * Mode - number of task
+     * Address - address of server that will be tested
+     * Type - type of load test - test the highest possible rps or test using known
+     * Max rps - rps that should be used
+     *
+     * @param args params for generator
+     * @throws IOException if an error occurs during generating config
+     */
     public static void main(final String[] args) throws IOException {
         if (args.length != 4) {
             System.err.println("Usage:\r\n"

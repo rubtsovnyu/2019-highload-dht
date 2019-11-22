@@ -7,10 +7,26 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Generates ammo for Yandex.Tank.
+ */
 public class AmmoGenerator {
     private static final int VALUE_LENGTH = 256;
     private static final String NEW_LINE = "\r\n";
 
+    private AmmoGenerator() {
+        // Not instantiable
+    }
+
+    /**
+     * Generates ammo for Yandex.Tank. The result depends on the parameters.
+     * Mode - number of task
+     * Requests count - number of ammo
+     * Last key - is needed for last task, optional (default = 0)
+     *
+     * @param args params for generator
+     * @throws IOException if an error occurs during generating ammo
+     */
     public static void main(final String[] args) throws IOException {
         if (args.length < 2 || args.length > 3) {
             System.err.println("Usage: [mode] [requests count] (optional)[last key]");
