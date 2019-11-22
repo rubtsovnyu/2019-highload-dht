@@ -11,7 +11,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Generates config for Yandex.Tank
  */
-public class ConfigGenerator {
+public final class ConfigGenerator {
     private ConfigGenerator() {
         // Not instantiable
     }

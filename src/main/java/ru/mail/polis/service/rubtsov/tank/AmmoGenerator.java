@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Generates ammo for Yandex.Tank.
  */
-public class AmmoGenerator {
+public final class AmmoGenerator {
     private static final int VALUE_LENGTH = 256;
     private static final String NEW_LINE = "\r\n";
 
