@@ -9,8 +9,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class AmmoGenerator {
     private static final int VALUE_LENGTH = 256;
+    private static final String newLine = "\r\n";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(final String[] args) throws IOException {
         if (args.length < 2 || args.length > 3) {
             System.err.println("Usage: [mode] [requests count] (optional)[last key]");
             System.exit(42);
@@ -107,14 +108,14 @@ public class AmmoGenerator {
         final ByteArrayOutputStream request = new ByteArrayOutputStream();
         try (Writer writer = new OutputStreamWriter(request, StandardCharsets.US_ASCII)) {
             writer.write("PUT /v0/entity?id=" + key + " HTTP/1.1\r\n");
-            writer.write("Content-Length: " + value.length + "\r\n");
-            writer.write("\r\n");
+            writer.write("Content-Length: " + value.length + newLine);
+            writer.write(newLine);
         }
         request.write(value);
         System.out.write(Integer.toString(request.size()).getBytes(StandardCharsets.US_ASCII));
         System.out.write(" PUT\n".getBytes(StandardCharsets.US_ASCII));
         request.writeTo(System.out);
-        System.out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+        System.out.write(newLine.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static void get(final long keyLong) throws IOException {
@@ -122,12 +123,12 @@ public class AmmoGenerator {
         final ByteArrayOutputStream request = new ByteArrayOutputStream();
         try (Writer writer = new OutputStreamWriter(request, StandardCharsets.US_ASCII)) {
             writer.write("GET /v0/entity?id=" + key + " HTTP/1.1\r\n");
-            writer.write("\r\n");
+            writer.write(newLine);
         }
         System.out.write(Integer.toString(request.size()).getBytes(StandardCharsets.US_ASCII));
         System.out.write(" GET\n".getBytes(StandardCharsets.US_ASCII));
         request.writeTo(System.out);
-        System.out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+        System.out.write(newLine.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static String keyFromLong(final long key) {

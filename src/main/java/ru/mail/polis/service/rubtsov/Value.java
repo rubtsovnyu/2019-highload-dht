@@ -43,7 +43,7 @@ public final class Value implements Comparable<Value> {
     }
 
     byte[] getDataBytes() {
-        byte[] dataBytes = new byte[this.data.remaining()];
+        final byte[] dataBytes = new byte[this.data.remaining()];
         this.data.duplicate().get(dataBytes);
         return dataBytes;
     }
